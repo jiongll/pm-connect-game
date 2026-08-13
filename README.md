@@ -5,10 +5,10 @@ Pages) + Supabase free tier. No build step.
 
 **Live:** https://jiongll.github.io/pm-connect-game/
 
-- Players: `index.html` (QR from the admin page)
-- Facilitator: `admin.html` (projector)
-- Diagnostics: `plumbing.html`
-- Solo game tuning: `dev.html`
+- Players: https://jiongll.github.io/pm-connect-game/ (QR on the admin page)
+- Facilitator: https://jiongll.github.io/pm-connect-game/admin.html (projector)
+- Diagnostics: https://jiongll.github.io/pm-connect-game/plumbing.html
+- Solo game tuning: https://jiongll.github.io/pm-connect-game/dev.html
 - Run of show: `docs/facilitator-script.md`
 - Reset between rehearsals: press "Start new game" on the admin page
 

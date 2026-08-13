@@ -3,7 +3,7 @@ import { HEAT_DURATION_MS, TIER_BONUS, BASE_SPEED, COIN_EVERY, OBSTACLE_EVERY,
          QUIZ_FIRST_AT, QUIZ_LAST_AT } from './config.js';
 import * as S from './scoring.js';
 
-const TIER_COLORS = ['#00b45e', '#0e8f8f', '#3d3f66', '#15151a'];
+const TIER_COLORS = ['#00b14f', '#17b5a6', '#3d3f66', '#15151a'];
 
 export function startGame(canvas, hud, questions, onFinish) {
   const ctx = canvas.getContext('2d');
@@ -192,14 +192,104 @@ export function startGame(canvas, hud, questions, onFinish) {
     ctx.closePath();
   }
 
+  function drawCoin(x, y) {                    // stylised Grab Coin
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 177, 79, 0.7)'; ctx.shadowBlur = 9;
+    ctx.fillStyle = '#00b14f';
+    ctx.beginPath(); ctx.arc(x, y, 16, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = '#d9fcde'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 15px system-ui';
+    ctx.fillText('G', x, y + 1);
+  }
+
+  function drawCone(x, y) {                    // traffic cone
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.beginPath(); ctx.ellipse(x, y + 18, 19, 5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#ff7a1a';
+    ctx.beginPath();
+    ctx.moveTo(x, y - 22); ctx.lineTo(x - 16, y + 14);
+    ctx.lineTo(x + 16, y + 14); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x - 8, y - 8, 16, 5);
+    ctx.fillRect(x - 12, y + 2, 24, 5);
+    ctx.fillStyle = '#e8650f';
+    ctx.fillRect(x - 19, y + 14, 38, 5);
+  }
+
+  function drawVip(x, y) {                     // the VIP pickup - hit it for a quiz
+    const pulse = 1 + 0.08 * Math.sin(elapsed * 6);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 215, 106, 0.5)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y, 27 * pulse, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowColor = 'rgba(255, 215, 106, 0.9)'; ctx.shadowBlur = 14;
+    ctx.fillStyle = '#ffd76a';
+    ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = '#fff3c4'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = '#3a2c00';
+    ctx.font = 'bold 10px system-ui';
+    ctx.fillText('★', x, y - 6);
+    ctx.font = 'bold 12px system-ui';
+    ctx.fillText('VIP', x, y + 6);
+  }
+
+  function drawCar(cx, cy) {                   // the car, tier-coloured
+    const flash = elapsed < invulnUntil && Math.floor(elapsed * 10) % 2 === 0;
+    ctx.globalAlpha = flash ? 0.4 : 1;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.beginPath(); ctx.ellipse(cx, cy + 42, 30, 8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#111116';
+    roundRect(cx - 31, cy - 32, 9, 22, 4); ctx.fill();
+    roundRect(cx + 22, cy - 32, 9, 22, 4); ctx.fill();
+    roundRect(cx - 31, cy + 10, 9, 22, 4); ctx.fill();
+    roundRect(cx + 22, cy + 10, 9, 22, 4); ctx.fill();
+    ctx.fillStyle = TIER_COLORS[tier];
+    roundRect(cx - 26, cy - 44, 52, 88, 14); ctx.fill();
+    if (tier === 3) {                          // Exec gets the gold trim
+      ctx.strokeStyle = '#e8c35a'; ctx.lineWidth = 3;
+      roundRect(cx - 26, cy - 44, 52, 88, 14); ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
+    roundRect(cx - 20, cy - 40, 18, 80, 9); ctx.fill();
+    ctx.fillStyle = 'rgba(165, 220, 255, 0.9)';
+    roundRect(cx - 18, cy - 32, 36, 20, 6); ctx.fill();
+    ctx.fillStyle = 'rgba(165, 220, 255, 0.55)';
+    roundRect(cx - 16, cy + 20, 32, 14, 5); ctx.fill();
+    ctx.fillStyle = '#fff9d9';
+    roundRect(cx - 20, cy - 42, 10, 5, 2); ctx.fill();
+    roundRect(cx + 10, cy - 42, 10, 5, 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
   function draw() {
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#0d3321';                 // verges
+
+    const verge = ctx.createLinearGradient(0, 0, 0, H);   // grass verges
+    verge.addColorStop(0, '#0f2e1d');
+    verge.addColorStop(1, '#0a1f14');
+    ctx.fillStyle = verge;
     ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = '#26262e';                 // road
+
+    const road = ctx.createLinearGradient(0, 0, 0, H);    // asphalt
+    road.addColorStop(0, '#23232b');
+    road.addColorStop(1, '#2c2c35');
+    ctx.fillStyle = road;
     ctx.fillRect(roadLeft(), 0, roadWidth(), H);
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    const kerbH = 24;                                     // scrolling kerb strips
+    for (let y = -kerbH * 2 + (dashOffset % (kerbH * 2)); y < H + kerbH; y += kerbH * 2) {
+      ctx.fillStyle = '#e8edea';
+      ctx.fillRect(roadLeft() - 6, y, 6, kerbH);
+      ctx.fillRect(roadLeft() + roadWidth(), y, 6, kerbH);
+      ctx.fillStyle = '#00804a';
+      ctx.fillRect(roadLeft() - 6, y + kerbH, 6, kerbH);
+      ctx.fillRect(roadLeft() + roadWidth(), y + kerbH, 6, kerbH);
+    }
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
     ctx.lineWidth = 4;
     ctx.setLineDash([26, 22]);
     ctx.lineDashOffset = -dashOffset;
@@ -209,49 +299,17 @@ export function startGame(canvas, hud, questions, onFinish) {
     }
     ctx.setLineDash([]);
 
-    for (const c of coins) {                   // stylised Grab Coin
-      const x = laneCenter(c.lane);
-      ctx.fillStyle = '#00c853';
-      ctx.beginPath(); ctx.arc(x, c.y, 16, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#a5ffce'; ctx.lineWidth = 3; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 16px system-ui';
-      ctx.fillText('G', x, c.y + 1);
-    }
-
-    for (const o of obstacles) {               // traffic cones
-      const x = laneCenter(o.lane);
-      ctx.fillStyle = '#ff7a1a';
-      ctx.beginPath();
-      ctx.moveTo(x, o.y - 22); ctx.lineTo(x - 18, o.y + 18);
-      ctx.lineTo(x + 18, o.y + 18); ctx.closePath(); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.fillRect(x - 12, o.y + 2, 24, 6);
-    }
-
-    if (vip) {                                 // the VIP pickup - hit it for a quiz
-      const x = laneCenter(vip.lane);
-      ctx.fillStyle = '#ffd76a';
-      ctx.beginPath(); ctx.arc(x, vip.y, 20, 0, Math.PI * 2); ctx.fill();
-      ctx.strokeStyle = '#fff3c4'; ctx.lineWidth = 3; ctx.stroke();
-      ctx.fillStyle = '#3a2c00'; ctx.font = 'bold 13px system-ui';
-      ctx.fillText('VIP', x, vip.y + 1);
-    }
-
-    const cx = laneCenter(carLane), cy = carY();   // the car, tier-coloured
-    const flash = elapsed < invulnUntil && Math.floor(elapsed * 10) % 2 === 0;
-    ctx.globalAlpha = flash ? 0.4 : 1;
-    ctx.fillStyle = TIER_COLORS[tier];
-    roundRect(cx - 26, cy - 44, 52, 88, 12); ctx.fill();
-    if (tier === 3) {                          // Exec gets the gold trim
-      ctx.strokeStyle = '#e8c35a'; ctx.lineWidth = 3;
-      roundRect(cx - 26, cy - 44, 52, 88, 12); ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(160, 220, 255, 0.85)';   // windscreen
-    roundRect(cx - 18, cy - 30, 36, 22, 6); ctx.fill();
-    ctx.globalAlpha = 1;
+    for (const c of coins) drawCoin(laneCenter(c.lane), c.y);
+    for (const o of obstacles) drawCone(laneCenter(o.lane), o.y);
+    if (vip) drawVip(laneCenter(vip.lane), vip.y);
+    drawCar(laneCenter(carLane), carY());
 
     if (feedback && elapsed < feedback.until) {
-      ctx.fillStyle = feedback.good ? '#7dffb0' : '#ffb0a8';
       ctx.font = 'bold 22px system-ui';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(4, 14, 9, 0.85)';
+      ctx.strokeText(feedback.text, W / 2, H * 0.32);
+      ctx.fillStyle = feedback.good ? '#7dffb0' : '#ffb0a8';
       ctx.fillText(feedback.text, W / 2, H * 0.32);
     }
   }
