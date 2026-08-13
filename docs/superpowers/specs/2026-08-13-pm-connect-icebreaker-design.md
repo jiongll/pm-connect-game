@@ -199,3 +199,18 @@ Both free tier. Manual steps for the owner, everything else is handled from the 
 | Supabase | Create account. Create a table via the UI. Copy two strings (project URL and public key) and hand them over |
 
 **Known trade-off:** The Supabase public key will be visible in the public repo. This is the normal pattern for this kind of app - Supabase provides a key type intended to be public - and the table will be configured so that key can only insert and read scores, nothing destructive. For a 10-minute internal ice breaker holding Slack handles and a commute preference, this is an acceptable exposure. Recorded here so it is a decision, not a discovery.
+
+---
+
+## Design change log
+
+### 2026-08-13 - Quiz v2, from the owner's first playtest
+
+The lane-gate quiz (drive through lane A/B/C to answer) is replaced:
+
+- A gold **VIP pickup** appears on the road on an even schedule. Steering into it is the skill element - miss it and that quiz is skipped.
+- On pickup the game **pauses** (the world and the 90 s heat clock both freeze) and a full-screen quiz appears: question, three tappable answer buttons, countdown.
+- Answer or run out of time: the correct answer is revealed briefly, then the run resumes with a short collision grace. Correct = tier upgrade (already Exec: +10 points). Wrong or timeout = no gain, no penalty (unchanged rule).
+- Config knobs (owner request): `QUIZ_COUNT`, `QUIZ_SECONDS`, plus `QUIZ_FIRST_AT` / `QUIZ_LAST_AT` for the spawn window. The remaining game-feel constants (base speed, spawn rates, boost) also move to `js/config.js` so playtest tuning is a one-line change.
+- Accepted trade-off: a heat's wall-clock length now varies per player (90 s of driving plus time spent on quizzes), so players finish at slightly different moments and the admin countdown is approximate. Scores land as each player finishes - unchanged behaviour.
+- Visuals stay placeholder; the proper visual pass remains in Task 9 (owner: "work on that later once we have gotten the mechanics sorted").
