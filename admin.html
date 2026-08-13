@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" class="admin">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grab Rush - Control Room</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+</head>
+<body class="admin">
+
+<div id="view-setup" class="admin-view active">
+  <div class="admin-head">
+    <h1 id="admin-title">Grab Rush - Control Room</h1>
+    <button class="admin-btn ghost new-game">Start new game</button>
+  </div>
+  <div id="setup-grid">
+    <div>
+      <div id="qr"></div>
+      <span id="player-url"></span>
+    </div>
+    <div>
+      <p class="count-big"><span id="join-count">0</span> in the waiting room</p>
+      <div id="join-list"></div>
+      <button id="start-heat" class="admin-btn" style="margin-top:1.6rem">Start the heat</button>
+    </div>
+  </div>
+</div>
+
+<div id="view-heat" class="admin-view">
+  <div class="admin-head">
+    <h1>Heat in progress</h1>
+    <span id="heat-timer">93</span>
+    <span><span id="finished-count">0</span> finished</span>
+    <button class="admin-btn ghost new-game">Start new game</button>
+  </div>
+  <table class="board"><tbody id="board-heat"></tbody></table>
+</div>
+
+<div id="view-match" class="admin-view">
+  <div class="admin-head">
+    <h1>Match round</h1>
+    <span id="connected-count">0 of 0 connected</span>
+    <button class="admin-btn ghost new-game">Start new game</button>
+  </div>
+  <table class="board"><tbody id="board-match"></tbody></table>
+</div>
+
+<script type="module" src="js/admin-app.js"></script>
+</body>
+</html>
