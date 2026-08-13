@@ -133,7 +133,7 @@ async function enterMatchRound() {
     const row = await db.getPlayer(me.id);
     me = { ...me, ...row };
     if (row.match_slack_id) showMatch(row); else showNoMatch();
-  } catch { /* onOwnRow polling will catch up */ }
+  } catch { matchEntered = false; /* retry on the next poll tick */ }
 }
 
 function showNoMatch() {
