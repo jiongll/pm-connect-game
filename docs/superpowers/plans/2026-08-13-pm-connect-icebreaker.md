@@ -16,13 +16,13 @@
 - Supabase JS v2 loaded via `<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>` (exposes global `window.supabase`).
 - All tunable numbers and lists live in `js/config.js`. All trivia lives in `js/questions.js`. Both are marked PLACEHOLDER where content is not final.
 - Game name is **"Grab Rush"** (placeholder, single definition in `js/config.js`).
-- Heat duration 90 000 ms. Match bonus 35 points. Coin +2. Collision −5 (score floor 0). Tier bonus 10 per tier at game end.
+- Heat duration 90 000 ms. Match bonus 35 points. Coin +2. Collision −5 (score floor 0). Tier bonus 10 per tier at game end. A correct gate answer while already Exec pays +10 run points (late gates stay worth playing).
 - Tiers, in order: `Standard, Plus, Premium, Exec`.
 - The Supabase anon key is public by design. RLS allows select/insert/update to `anon` and **never delete**.
 - UI copy: British English, no em dashes. Every user-visible failure state has copy — no silent failures.
 - Phone-first portrait. Lane change by tapping left/right half of the canvas AND ArrowLeft/ArrowRight keys (virtual attendees on laptops).
 - All players get trivia questions in the identical order (fairness). No shuffling.
-- Stylised visuals only — no real Grab brand assets in this public repo.
+- Real Grab palette (Duxton green tokens where available) with stylised look-alike shapes for coins and cars. No proprietary Grab asset files (logos, fonts, images) in this public repo — owner approved this line 2026-08-13.
 - Task 0 (owner accounts) blocks Task 1's live verification and Tasks 7-9 end-to-end checks. Tasks 2-6 need no accounts and may proceed while waiting.
 
 ## Known accepted trade-offs (do not "fix" these)
@@ -30,7 +30,7 @@
 - Start-signal skew up to ~3 s between clients (realtime vs poll fallback); every client still gets a full local 90 s.
 - A player who refreshes mid-heat rejoins and plays a fresh full 90 s. Facilitator handles abuse socially.
 - Any client with the anon key can update rows (internal event, accepted in spec). No delete policy is the guardrail.
-- Between-rehearsal reset is a saved SQL snippet run in the Supabase dashboard, not an admin-page button (keeps the public key non-destructive).
+- Reset/restart is the admin **"Start new game"** button: it bumps `game_state.session`, every client snaps back to the join screen, and all reads filter to the current session. Old rows are kept but ignored — the public key still cannot delete anything. `docs/reset.sql` is only the after-the-event full wipe.
 
 ## File structure
 
@@ -89,19 +89,22 @@ Choose: GitHub.com → HTTPS → Login with a web browser → copy the one-time 
 -- Tables
 create table if not exists players (
   id uuid primary key default gen_random_uuid(),
-  slack_id text not null unique,
+  session int not null default 1,
+  slack_id text not null,
   tech_family text not null,
   bucket text not null,
   score int,
   match_slack_id text,
   claimed_match text,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  unique (slack_id, session)
 );
 
 create table if not exists game_state (
   id int primary key,
   status text not null default 'waiting',
-  started_at timestamptz
+  started_at timestamptz,
+  session int not null default 1
 );
 insert into game_state (id, status) values (1, 'waiting')
 on conflict (id) do nothing;
@@ -265,7 +268,7 @@ Pages) + Supabase free tier. No build step.
 - Diagnostics: `plumbing.html`
 - Solo game tuning: `dev.html`
 - Run of show: `docs/facilitator-script.md`
-- Reset between rehearsals: run `docs/reset.sql` in the Supabase SQL Editor
+- Reset between rehearsals: press "Start new game" on the admin page
 
 Local dev: `python3 -m http.server 8080` then http://localhost:8080/
 Tests: `npm test`
@@ -550,7 +553,7 @@ export function connectionStats(players) {
 
 **Interfaces:**
 - Consumes: `SUPABASE_URL`, `SUPABASE_ANON_KEY` from `js/config.js`; global `window.supabase` (CDN).
-- Produces (`js/db.js`): `normaliseSlackId(raw):string`, `joinGame(slackId, techFamily, bucket):Promise<PlayerRow>`, `getPlayer(id):Promise<PlayerRow>`, `getPlayers():Promise<PlayerRow[]>`, `getGameState():Promise<{id,status,started_at}|null>`, `setGameStatus(status):Promise<void>`, `submitScore(playerId, score):Promise<boolean>` (3 retries, never throws), `assignMatches(pairs, allPlayers):Promise<void>`, `claimMatch(playerId, claimedSlackId):Promise<void>`, and subscription helpers `onGameState(cb)`, `onPlayers(cb)`, `onOwnRow(playerId, cb)` — each realtime + polling fallback, each returning an unsubscribe function. **Callbacks must tolerate repeated calls with identical data** (poll and realtime overlap by design).
+- Produces (`js/db.js`): `normaliseSlackId(raw):string`, `joinGame(slackId, techFamily, bucket):Promise<PlayerRow>` (writes into the current session), `getPlayer(id):Promise<PlayerRow>`, `getPlayers(session):Promise<PlayerRow[]>`, `getGameState():Promise<{id,status,started_at,session}|null>`, `setGameStatus(status):Promise<void>`, `newSession():Promise<void>` (the "Start new game" reset — bumps the session, deletes nothing), `submitScore(playerId, score):Promise<boolean>` (3 retries, never throws), `assignMatches(pairs, allPlayers):Promise<void>`, `claimMatch(playerId, claimedSlackId):Promise<void>`, and subscription helpers `onGameState(cb)`, `onPlayers(session, cb)`, `onOwnRow(playerId, cb)` — each realtime + polling fallback, each returning an unsubscribe function. **Callbacks must tolerate repeated calls with identical data** (poll and realtime overlap by design).
 - Produces (`js/questions.js`): `QUESTIONS: {q:string, options:[string,string,string], correct:0|1|2}[]`.
 
 - [ ] **Step 1: Write `js/questions.js`**
@@ -599,8 +602,9 @@ export function normaliseSlackId(raw) {
 export async function joinGame(slackId, techFamily, bucket) {
   const slack_id = normaliseSlackId(slackId);
   if (!slack_id) throw new Error('Slack ID is required.');
+  const state = await getGameState();          // joins always land in the current session
   const { data, error } = await client.from('players')
-    .insert({ slack_id, tech_family: techFamily, bucket })
+    .insert({ slack_id, tech_family: techFamily, bucket, session: state?.session ?? 1 })
     .select().single();
   if (error) {
     if (error.code === '23505') throw new Error('That Slack ID has already joined.');
@@ -615,8 +619,8 @@ export async function getPlayer(id) {
   return data;
 }
 
-export async function getPlayers() {
-  const { data, error } = await client.from('players').select('*');
+export async function getPlayers(session) {
+  const { data, error } = await client.from('players').select('*').eq('session', session);
   return error ? [] : data;
 }
 
@@ -630,6 +634,19 @@ export async function setGameStatus(status) {
   if (status === 'started') patch.started_at = new Date().toISOString();
   const { error } = await client.from('game_state').update(patch).eq('id', 1);
   if (error) throw new Error('Could not update the game state. Try again.');
+}
+
+// The admin "Start new game" reset: bump the session counter. Every client
+// sees the change, snaps back to the join screen, and all reads filter to
+// the new session. Old rows stay in the table, invisible - nothing is
+// deleted, so the public key never needs delete rights.
+export async function newSession() {
+  const state = await getGameState();
+  if (!state) throw new Error('Could not read the game state. Try again.');
+  const { error } = await client.from('game_state')
+    .update({ session: state.session + 1, status: 'waiting', started_at: null })
+    .eq('id', 1);
+  if (error) throw new Error('Could not start a new game. Try again.');
 }
 
 // Best-effort: 3 attempts with backoff. Returns false rather than throwing -
@@ -673,8 +690,8 @@ export function onGameState(cb) {
   return () => { client.removeChannel(ch); clearInterval(poll); };
 }
 
-export function onPlayers(cb) {
-  const push = async () => cb(await getPlayers());
+export function onPlayers(session, cb) {
+  const push = async () => cb(await getPlayers(session));
   const ch = client.channel('pl')
     .on('postgres_changes',
         { event: '*', schema: 'public', table: 'players' }, push)
@@ -702,12 +719,16 @@ export function onOwnRow(playerId, cb) {
 
 ```js
 const db = await import('./js/db.js');
-await db.getGameState();          // → {id: 1, status: 'waiting', started_at: null}
-await db.joinGame('@Console.Test', 'Mobility', 'Grab');  // → row, slack_id 'console.test'
+await db.getGameState();          // → {id: 1, status: 'waiting', started_at: null, session: 1}
+await db.joinGame('@Console.Test', 'Mobility', 'Grab');  // → row, slack_id 'console.test', session 1
 await db.joinGame('console.test', 'Mobility', 'Grab');   // → throws 'already joined'
+await db.getPlayers(1);           // → array including the row above
+await db.newSession();            // bumps to session 2
+await db.getPlayers(2);           // → [] (old rows invisible in the new session)
+await db.joinGame('console.test', 'Mobility', 'Grab');   // → succeeds again (new session)
 ```
 
-Expected: normalisation strips `@` and lowercases; duplicate rejected with friendly message.
+Expected: normalisation strips `@` and lowercases; duplicate rejected with friendly message; after `newSession()` the same Slack ID can join afresh and old rows are hidden.
 
 - [ ] **Step 4: Run tests still green** — `npm test`. Expected: 18 pass (db.js is browser-only, untested by node).
 
@@ -721,7 +742,7 @@ Expected: normalisation strips `@` and lowercases; duplicate rejected with frien
 - Create: `css/style.css`, `admin.html`, `js/admin-app.js`
 
 **Interfaces:**
-- Consumes: `db.js` (`onPlayers`, `onGameState`, `getGameState`, `setGameStatus`), `pairing.js` (`buildLeaderboard`), `config.js` (`GAME_NAME`, `MATCH_BONUS`, `HEAT_DURATION_MS`), CDN global `QRCode`.
+- Consumes: `db.js` (`onPlayers`, `onGameState`, `getGameState`, `setGameStatus`, `newSession`), `pairing.js` (`buildLeaderboard`), `config.js` (`GAME_NAME`, `MATCH_BONUS`, `HEAT_DURATION_MS`), CDN global `QRCode`.
 - Produces: the projector page through the heat phase. Match-round controls arrive in Task 8. CSS ids/classes used by BOTH pages: `.screen`/`.active`, `#hud`, `#question-banner`(+`.visible`), `#canvas-wrap`, `#game-canvas`, `.chip`, `.board`, `.primary`, `.error`.
 
 - [ ] **Step 1: Write `css/style.css`**
@@ -827,6 +848,10 @@ label > input, label > select { margin-top: .35rem; }
   padding: .9rem 1.6rem; font-size: 1.1rem; font-weight: 700;
   border: 0; border-radius: 12px; background: #00b45e; color: #04140b;
 }
+.admin-btn.ghost {
+  background: #142019; color: #cde7d8; border: 1px solid #24402f;
+  margin-left: auto; padding: .55rem 1rem; font-size: .95rem;
+}
 ```
 
 - [ ] **Step 2: Write `admin.html`**
@@ -847,6 +872,7 @@ label > input, label > select { margin-top: .35rem; }
 <div id="view-setup" class="admin-view active">
   <div class="admin-head">
     <h1 id="admin-title">Grab Rush - Control Room</h1>
+    <button class="admin-btn ghost new-game">Start new game</button>
   </div>
   <div id="setup-grid">
     <div>
@@ -866,6 +892,7 @@ label > input, label > select { margin-top: .35rem; }
     <h1>Heat in progress</h1>
     <span id="heat-timer">93</span>
     <span><span id="finished-count">0</span> finished</span>
+    <button class="admin-btn ghost new-game">Start new game</button>
   </div>
   <table class="board"><tbody id="board-heat"></tbody></table>
 </div>
@@ -874,6 +901,7 @@ label > input, label > select { margin-top: .35rem; }
   <div class="admin-head">
     <h1>Match round</h1>
     <span id="connected-count">0 of 0 connected</span>
+    <button class="admin-btn ghost new-game">Start new game</button>
   </div>
   <table class="board"><tbody id="board-match"></tbody></table>
 </div>
@@ -904,12 +932,18 @@ async function init() {
   new QRCode($('qr'), { text: playerUrl, width: 300, height: 300 });
   $('player-url').textContent = playerUrl;
 
-  db.onPlayers(list => { players = list; render(); });
-  db.onGameState(state => { if (state) setPhase(state.status); });
   const state = await db.getGameState();
+  const session = state ? state.session : 1;
+  db.onPlayers(session, list => { players = list; render(); });
+  db.onGameState(s => {
+    if (!s) return;
+    if (s.session !== session) { location.reload(); return; }  // reset from another tab
+    setPhase(s.status);
+  });
   if (state) setPhase(state.status);
 
   $('start-heat').addEventListener('click', startHeat);
+  for (const b of document.querySelectorAll('.new-game')) b.addEventListener('click', newGame);
 }
 
 function setPhase(status) {
@@ -922,6 +956,14 @@ function setPhase(status) {
 async function startHeat() {
   if (!confirm('Start the heat for ' + players.length + ' players?')) return;
   try { await db.setGameStatus('started'); }
+  catch (err) { alert(err.message); }
+}
+
+// The reset. Bumps the session; every phone returns to the join screen.
+// Reloading afterwards re-subscribes this page to the new session.
+async function newGame() {
+  if (!confirm('Start a new game? Everyone goes back to the join screen and the board clears.')) return;
+  try { await db.newSession(); location.reload(); }
   catch (err) { alert(err.message); }
 }
 
@@ -964,7 +1006,9 @@ function esc(s) {
 
 - [ ] **Step 5: Verify the phase switch** — console: `(await import('./js/db.js')).setGameStatus('started')`. Expected: view flips to "Heat in progress", timer counts down from 93. Then reset for later tasks: `(await import('./js/db.js')).setGameStatus('waiting')`.
 
-- [ ] **Step 6: Commit** — `git add css/style.css admin.html js/admin-app.js && git commit -m "feat: admin page - QR, waiting room, heat view"`
+- [ ] **Step 6: Verify the reset button** — press **Start new game** → confirm. Expected: the page reloads and the waiting room shows 0, even though the old rows still exist in the table (they belong to the previous session). Console-join one more player and confirm the chip appears — new joins land in the new session.
+
+- [ ] **Step 7: Commit** — `git add css/style.css admin.html js/admin-app.js && git commit -m "feat: admin page - QR, waiting room, heat view, session reset"`
 
 ---
 
@@ -975,12 +1019,12 @@ function esc(s) {
 
 **Interfaces:**
 - Consumes: `HEAT_DURATION_MS` from `config.js`; all of `scoring.js`; `QUESTIONS` shape from `questions.js`.
-- Produces: `startGame(canvas, hud, questions, onFinish)` where `hud = {score, tier, time, banner, question, options}` (DOM elements), and `onFinish(finalScore:number, tier:number)` fires exactly once when the heat ends. Returns `{stop():void}`. Gates appear at fixed elapsed seconds `[12, 26, 40, 54, 68, 82]`; road slows to 0.45× while a gate is on screen; correct answer = tier up + 2 s speed boost; wrong = nothing.
+- Produces: `startGame(canvas, hud, questions, onFinish)` where `hud = {score, tier, time, banner, question, options}` (DOM elements), and `onFinish(finalScore:number, tier:number)` fires exactly once when the heat ends. Returns `{stop():void}`. Gates appear at fixed elapsed seconds `[12, 26, 40, 54, 68, 82]`; road slows to 0.45× while a gate is on screen; correct answer = tier up + 2 s speed boost (already at Exec: +`TIER_BONUS` run points instead, so late gates stay live); wrong = nothing.
 
 - [ ] **Step 1: Write `js/game.js`**
 
 ```js
-import { HEAT_DURATION_MS } from './config.js';
+import { HEAT_DURATION_MS, TIER_BONUS } from './config.js';
 import * as S from './scoring.js';
 
 const TIER_COLORS = ['#00b45e', '#0e8f8f', '#3d3f66', '#15151a'];
@@ -1085,10 +1129,12 @@ export function startGame(canvas, hud, questions, onFinish) {
 
     if (gate && gate.y >= carY()) {
       const correct = carLane === gate.q.correct;
-      const prevTier = tier;
+      const atMax = tier === S.TIERS.length - 1;   // already Exec
       tier = S.answerQuestion(tier, correct);
+      if (correct && atMax) score += TIER_BONUS;   // Exec: late gates stay worth playing
       feedback = correct
-        ? { text: tier > prevTier ? 'Upgraded to ' + S.TIERS[tier] + '!' : 'Correct!',
+        ? { text: atMax ? 'Exec bonus +' + TIER_BONUS + '!'
+                        : 'Upgraded to ' + S.TIERS[tier] + '!',
             until: elapsed + 1.5, good: true }
         : { text: 'Not quite - no change', until: elapsed + 1.5, good: false };
       if (correct) boostUntil = elapsed + 2;
@@ -1248,6 +1294,7 @@ startGame($('game-canvas'),
   - driving through the correct lane upgrades the car (colour changes, "Upgraded to Plus!")
   - wrong lane → "Not quite - no change", tier keeps its colour
   - during the run reach Premium and confirm adjacent-lane coins collect (magnet)
+  - reach Exec, answer one more gate correctly → "Exec bonus +10!" and score jumps by 10
   - timer hits 0 at 90 s → alert with a plausible score (engaged play ≈ 90-150)
   - after the alert, arrow keys do nothing (listeners removed)
 
@@ -1263,7 +1310,7 @@ startGame($('game-canvas'),
 - Create: `index.html`, `js/player-app.js`
 
 **Interfaces:**
-- Consumes: everything produced so far. localStorage key `grabrush_player_id`.
+- Consumes: everything produced so far. localStorage key `grabrush_player_id`. A saved player whose row belongs to an older session is treated as not joined (cleared, back to the entry form).
 - Produces: full player flow through score submission. The match block exists in the DOM (hidden) but its behaviour arrives in Task 8. URL flag `?solo=1` skips the backend entirely (dev + demo).
 
 - [ ] **Step 1: Write `index.html`**
@@ -1378,8 +1425,14 @@ async function init() {
 
   const savedId = localStorage.getItem('grabrush_player_id');
   if (savedId) {
-    try { me = await db.getPlayer(savedId); }
-    catch { localStorage.removeItem('grabrush_player_id'); }
+    try {
+      const [row, state] = await Promise.all([db.getPlayer(savedId), db.getGameState()]);
+      if (state && row.session !== state.session) {
+        localStorage.removeItem('grabrush_player_id');   // old game - join afresh
+      } else {
+        me = row;
+      }
+    } catch { localStorage.removeItem('grabrush_player_id'); }
   }
   if (me) enterWaiting();
 }
@@ -1407,6 +1460,11 @@ function enterWaiting() {
 
 function onState(state) {
   if (!state) return;
+  if (me && state.session !== me.session) {     // host pressed "Start new game"
+    localStorage.removeItem('grabrush_player_id');
+    location.reload();                          // clean slate, back to the entry form
+    return;
+  }
   if (state.status === 'started' && appState === 'waiting') beginCountdown();
 }
 
@@ -1450,13 +1508,14 @@ async function onGameFinish(finalScore, tier) {
 
 - [ ] **Step 3: Verify solo mode** — preview `http://localhost:8080/index.html?solo=1`. Expected: straight to 3-2-1 countdown, full game, results screen with "Solo mode - score not submitted."
 
-- [ ] **Step 4: Verify the full heat end-to-end, locally** — reset data first. In the Supabase dashboard SQL Editor run: `truncate table players; update game_state set status = 'waiting', started_at = null where id = 1;` Then:
+- [ ] **Step 4: Verify the full heat end-to-end, locally** — reset first: on `admin.html` press **Start new game** (built in Task 5). Then:
   1. Tab A: `admin.html` — 0 in waiting room
   2. Tab B: `index.html` — join as `pax-one`, Mobility, Grab → waiting screen; admin count becomes 1 (within 5 s)
   3. Tab C: `index.html` in a private/incognito window (separate localStorage!) — join as `pax-two`, Deliveries, Grab
   4. Tab B duplicate check: reload `index.html` in a THIRD normal tab — it must go straight to the waiting screen (rejoin via localStorage), not the entry form
   5. Admin: Start the heat → both player tabs count down within ~3 s and play
   6. Let both finish → both scores appear on the admin heat board as they land
+  7. Admin: press **Start new game** → within ~3 s both player tabs reload to the entry form, and the admin waiting room reads 0
   Expected at every step; any deviation is a bug to fix now.
 
 - [ ] **Step 5: Push and verify on a real phone** — `git add index.html js/player-app.js && git commit -m "feat: player flow - entry, waiting room, heat, results" && git push`. After Pages redeploys (~2 min): reset data again, then on the owner's phone join via the live URL, start the heat from the laptop's admin page, play the full 90 s on the phone. Expected: countdown, playable game, score lands on the admin leaderboard. **This is milestone 2.**
@@ -1584,7 +1643,7 @@ async function claim() {
 }
 
 async function checkConnected() {
-  const players = await db.getPlayers();
+  const players = await db.getPlayers(me.session);
   const mine = players.find(p => p.id === me.id);
   if (mine && bonusAwarded(mine, players)) {
     connectedDone = true;
@@ -1597,7 +1656,7 @@ async function checkConnected() {
 
 - [ ] **Step 4: Run tests still green** — `npm test`. Expected: 18 pass.
 
-- [ ] **Step 5: Verify the match round end-to-end, locally** — reset data (same SQL as Task 7 Step 4). Join and play three players from three isolated tabs (normal + incognito + a different browser): `pax-one` Mobility/Grab, `pax-two` Deliveries/Grab, `pax-three` Mobility/Drive. Start heat, let all three finish. Then admin → "Start the match round". Expected:
+- [ ] **Step 5: Verify the match round end-to-end, locally** — reset via the admin **Start new game** button. Join and play three players from three isolated tabs (normal + incognito + a different browser): `pax-one` Mobility/Grab, `pax-two` Deliveries/Grab, `pax-three` Mobility/Drive. Start heat, let all three finish. Then admin → "Start the match round". Expected:
   - `pax-one` and `pax-two` each see the other's ID with the bucket line; `pax-three` sees the no-match copy
   - `pax-one` types `pax-two` → "Saved. Waiting..."; leaderboard unchanged
   - `pax-two` types `pax-one` → within ~4 s BOTH phones show "Connected! +35", the admin board re-ranks with both scores +35 and 🤝, and the counter reads "2 of 2 connected"
@@ -1620,10 +1679,12 @@ async function checkConnected() {
 - [ ] **Step 1: Write `docs/reset.sql`**
 
 ```sql
--- Run in Supabase dashboard → SQL Editor between rehearsals / before the event.
--- Kept out of the app on purpose: the public key must stay non-destructive.
+-- FULL WIPE - run in the Supabase dashboard → SQL Editor after the event
+-- (or to purge rehearsal data for good). Day-to-day resets do NOT need
+-- this: the admin page's "Start new game" button starts a clean session
+-- without deleting anything, and the public key stays non-destructive.
 truncate table players;
-update game_state set status = 'waiting', started_at = null where id = 1;
+update game_state set status = 'waiting', started_at = null, session = 1 where id = 1;
 ```
 
 - [ ] **Step 2: Write `docs/facilitator-script.md`**
@@ -1632,10 +1693,10 @@ update game_state set status = 'waiting', started_at = null where id = 1;
 # Facilitator run book - Grab Rush (10 minutes)
 
 ## Before the session (day before + 30 min before)
-- [ ] Run `docs/reset.sql` in Supabase → SQL Editor (wipes rehearsal data)
 - [ ] Open `admin.html` on the projector laptop; confirm QR renders
+- [ ] Press **Start new game** (clears the room and board from rehearsals)
 - [ ] Phone check: join from your own phone on mobile data; confirm your
-      name appears in the waiting room; run reset.sql again after
+      name appears in the waiting room; press **Start new game** again after
 - [ ] Paste the player URL in the session Slack channel, pinned, for
       virtual attendees
 - [ ] Charge the projector laptop; hotspot as wifi backup
@@ -1677,14 +1738,15 @@ three minutes."
 
 ## After
 - Screenshot the final board for the follow-up post
-- Run `docs/reset.sql` if there will ever be a round two
+- Round two some day? Just press **Start new game**. Run `docs/reset.sql`
+  only to purge all data for good
 ```
 
 - [ ] **Step 3: Update `README.md`** — replace the local-dev line block with the live URLs (player, admin, plumbing) recorded from Task 1 Step 10. Keep the local dev instructions beneath them.
 
-- [ ] **Step 4: Full dress rehearsal on real devices** — reset data, then: admin on the laptop, owner's phone + one more real phone (or a colleague) as players, one laptop player over the Slack-pasted URL for the virtual path. Run the entire show: join → heat → top 3 → match round → mutual claim → final board. Every checklist item in the facilitator script must hold. Fix and re-push anything that does not; repeat until clean.
+- [ ] **Step 4: Full dress rehearsal on real devices** — press **Start new game**, then: admin on the laptop, owner's phone + one more real phone (or a colleague) as players, one laptop player over the Slack-pasted URL for the virtual path. Run the entire show: join → heat → top 3 → match round → mutual claim → final board. Every checklist item in the facilitator script must hold. Fix and re-push anything that does not; repeat until clean.
 
-- [ ] **Step 5: Design critique pass** — per the owner's global standards: review both pages for hierarchy, typography, spacing, colour, accessibility (contrast of `#9db3a6` on `#0b0f0d`, tap-target sizes ≥ 44 px, focus states on inputs). Present as a table with verdicts; fix only what the owner approves.
+- [ ] **Step 5: Design critique pass** — per the owner's global standards: review both pages for hierarchy, typography, spacing, colour, accessibility (contrast of `#9db3a6` on `#0b0f0d`, tap-target sizes ≥ 44 px, focus states on inputs). Before the pass, pull the real Grab palette via the `design-tokens` MCP (`find_duxton_color_tokens_by_prefix`, prefix `green`) and swap the placeholder greens (`#00b45e`, `#37e08b`) for the true Duxton values if they differ — palette only, no proprietary asset files (owner-approved line). Present as a table with verdicts; fix only what the owner approves.
 
 - [ ] **Step 6: Final commit and push** — `git add -A && git commit -m "feat: facilitator run book, reset script, rehearsal fixes" && git push`
 
@@ -1692,6 +1754,6 @@ three minutes."
 
 ## Self-review checklist (done at plan-writing time)
 
-- Spec coverage: QR onboarding ✓, Slack link for virtual ✓, 3-field entry ✓, admin-gated synchronised start ✓, waiting-room count ✓, 90 s heat ✓, 3-lane tap control + laptop keys ✓, stylised Grab Coins ✓, obstacles non-fatal ✓, trivia gates with slow-down reading time ✓, tier progression with perks ✓, wrong answer = no gain no penalty ✓, mixed placeholder trivia pool ✓, live leaderboard with TF ✓, best-effort writes + local score independence ✓, reciprocal 1-to-1 same-bucket-cross-TF matching ✓, mutual verification + 35-point bonus ✓, "X of Y connected" counter ✓, unmatched players unaffected ✓, plumbing-first build order ✓, screenshot fallback + facilitator script ✓, reset between rehearsals ✓, latecomer line ✓.
+- Spec coverage: QR onboarding ✓, Slack link for virtual ✓, 3-field entry ✓, admin-gated synchronised start ✓, waiting-room count ✓, 90 s heat ✓, 3-lane tap control + laptop keys ✓, stylised Grab Coins ✓, obstacles non-fatal ✓, trivia gates with slow-down reading time ✓, tier progression with perks ✓, wrong answer = no gain no penalty ✓, mixed placeholder trivia pool ✓, live leaderboard with TF ✓, best-effort writes + local score independence ✓, reciprocal 1-to-1 same-bucket-cross-TF matching ✓, mutual verification + 35-point bonus ✓, "X of Y connected" counter ✓, unmatched players unaffected ✓, plumbing-first build order ✓, screenshot fallback + facilitator script ✓, reset between rehearsals via the admin "Start new game" session bump (owner request, 2026-08-13) ✓, Exec-tier gate bonus so late gates stay live (game-design review, 2026-08-13) ✓, latecomer line ✓.
 - Placeholder scan: the only PLACEHOLDER markers are deliberate content stubs (name, trivia, TF list, bucket question) named as such in the spec.
-- Type consistency: `players` row fields (`slack_id, tech_family, bucket, score, match_slack_id, claimed_match`) match across SQL, db.js, pairing.js tests, and both apps; `hud` object keys match between game.js, dev.html, and player-app.js; `startGame(canvas, hud, questions, onFinish)` signature identical at all three call sites.
+- Type consistency: `players` row fields (`session, slack_id, tech_family, bucket, score, match_slack_id, claimed_match`) match across SQL, db.js, pairing.js tests, and both apps; every `getPlayers`/`onPlayers` call site passes a session; `hud` object keys match between game.js, dev.html, and player-app.js; `startGame(canvas, hud, questions, onFinish)` signature identical at all three call sites.
