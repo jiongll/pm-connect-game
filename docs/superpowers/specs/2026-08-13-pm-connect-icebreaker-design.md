@@ -67,9 +67,18 @@ Three fields. One typed, two tapped.
 
 1. **Slack ID** - this is the player's name. Appears on the leaderboard, and is how virtual attendees are reachable
 2. **Tech Family** - dropdown. Used for the cross-TF pairing rule and shown on the leaderboard, where it is the source of most of the comedy
-3. **Bucket answer** - dropdown, placeholder question for now. Determines who the player is paired with, and gives the pair something to talk about
+3. **Bucket answer** - dropdown. Determines who the player is paired with, and gives the pair something to talk about
 
-Placeholder bucket question, to be replaced before the event. Kept to four options so buckets stay populous at ~60 players.
+**Working bucket question (placeholder, may be replaced before the event):**
+
+> How do you commute to work?
+
+- Grab
+- Train / Bus / Walk
+- Drive
+- Get dropped off
+
+Four options, chosen so buckets stay populous at ~60 players. Each answer gives a pair something concrete to open with, and "Grab" as its own bucket is apt at a Grab event.
 
 ---
 
@@ -89,7 +98,7 @@ Reading time is the reason the road slows. Inline trivia at full speed is a refl
 
 Correct answers upgrade the vehicle through Grab Taxi Type tiers - standard, Plus, Premium, Exec. Higher tiers carry a gameplay benefit (faster, wider coin pickup). The tier a player finishes at *is* their trivia score, and they can see themselves climbing the ladder as they play.
 
-Wrong answer behaviour is an open decision - either downgrade a tier, or simply fail to upgrade. Downgrading creates more tension; failing to upgrade is gentler on the room.
+**A wrong answer means no gain, but no penalty.** No tier downgrade, no points lost. The room is ~80% non-Mobility PMs; punishing them twice for not knowing a Mobility question would sour an ice breaker whose whole job is to make people feel good. The upside stays motivating without the downside stinging.
 
 **Trivia pool:** Mixed, roughly 40% Mobility and 60% Grab-wide playful. The room is mostly not Mobility PMs. Deep AB or HQF questions would make 80% of the audience lose, which defeats the purpose.
 
@@ -156,10 +165,14 @@ The riskiest thing in this design is the live external backend in front of a ful
 
 ## Open decisions
 
-1. **Wrong trivia answer** - downgrade a car tier, or simply fail to upgrade
-2. **Bucket question** - placeholder for now. Chosen for conversational value, since pairing is automatic. Leading candidate: "Which Grab product would you most want to PM if you could switch tomorrow?" - pairs PMs who share a secret ambition, which is a better three-minute conversation than a shared commute
-3. **Trivia content** - 15 or so real questions, 40/60 Mobility to Grab-wide. Content work, not code
-4. **Game name** - "Grab Rush" as a placeholder
+1. **Trivia content** - 15 or so real questions, 40/60 Mobility to Grab-wide. Content work, not code. Placeholders until then
+2. **Bucket question** - "How do you commute to work?" is the working placeholder and may be swapped before the event
+3. **Game name** - "Grab Rush" as a placeholder
+
+## Settled
+
+- **Wrong trivia answer:** no gain, no penalty
+- **Paid tiers:** not needed. Free Supabase and GitHub Pages comfortably handle ~60 players. Paying buys headroom that is not the constraint; the real risks are venue network, a wrong key, or a phone browser quirk, none of which money fixes. A custom domain (~$10-15/year) is the only spend worth revisiting late, purely so the QR points somewhere tidier than a `github.io` path
 
 ---
 
