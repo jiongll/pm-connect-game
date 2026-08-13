@@ -3,6 +3,8 @@
 Phone-first driving game + cross-Tech-Family match round. Static site (GitHub
 Pages) + Supabase free tier. No build step.
 
+**Live:** https://jiongll.github.io/pm-connect-game/
+
 - Players: `index.html` (QR from the admin page)
 - Facilitator: `admin.html` (projector)
 - Diagnostics: `plumbing.html`
