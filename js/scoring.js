@@ -1,4 +1,4 @@
-import { COIN_POINTS, COLLISION_PENALTY, TIER_BONUS } from './config.js';
+import { COIN_POINTS, COLLISION_PENALTY, TIER_BONUS, TIER_SPEED_STEP, MAGNET_TIER } from './config.js';
 
 export const TIERS = ['Standard', 'Plus', 'Premium', 'Exec'];
 
@@ -9,5 +9,5 @@ export function answerQuestion(tier, correct) {
 }
 export function tierPoints(tier) { return tier * TIER_BONUS; }
 export function finalScore(runScore, tier) { return runScore + tierPoints(tier); }
-export function tierSpeedMultiplier(tier) { return 1 + tier * 0.06; }
-export function tierHasMagnet(tier) { return tier >= 2; }
+export function tierSpeedMultiplier(tier) { return 1 + tier * TIER_SPEED_STEP; }
+export function tierHasMagnet(tier) { return tier >= MAGNET_TIER; }

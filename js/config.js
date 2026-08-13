@@ -9,6 +9,8 @@ export const MATCH_BONUS = 35;
 export const COIN_POINTS = 2;
 export const COLLISION_PENALTY = 5;
 export const TIER_BONUS = 10;                    // points per tier at game end
+export const TIER_SPEED_STEP = 0.06;             // extra speed per tier (game feel)
+export const MAGNET_TIER = 2;                    // tier index that unlocks the coin magnet (2 = Premium)
 
 // PLACEHOLDER list - replace with the real Tech Family names before the event.
 export const TECH_FAMILIES = [
