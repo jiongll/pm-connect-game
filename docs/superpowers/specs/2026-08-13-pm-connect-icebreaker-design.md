@@ -30,7 +30,7 @@ The game is the hook. The cross-Tech-Family pairing is the deliverable.
 | Audience is ~80% non-Mobility PMs | Trivia cannot require Mobility knowledge to be fair |
 | Hybrid: multiple physical sites plus virtual attendees | Every mechanic must work for someone sitting alone at home |
 | No company server or database | Static hosting plus a free third-party backend |
-| Personal free repo, not company repo | No real Grab brand assets; stylised approximations only |
+| Personal free repo, not company repo | Real Grab palette is fine (owner approved - it's a Grab event); no proprietary Grab asset files (logos, fonts, images) in the public repo |
 
 ---
 
@@ -98,6 +98,8 @@ Reading time is the reason the road slows. Inline trivia at full speed is a refl
 
 Correct answers upgrade the vehicle through Grab Taxi Type tiers - standard, Plus, Premium, Exec. Higher tiers carry a gameplay benefit (faster, wider coin pickup). The tier a player finishes at *is* their trivia score, and they can see themselves climbing the ladder as they play.
 
+Once a player reaches Exec, a correct answer pays +10 run points instead. Without this, the last few gates would be worthless to anyone already at the top tier, and the sharpest players would stop reading the trivia - the opposite of the point.
+
 **A wrong answer means no gain, but no penalty.** No tier downgrade, no points lost. The room is ~80% non-Mobility PMs; punishing them twice for not knowing a Mobility question would sour an ice breaker whose whole job is to make people feel good. The upside stays motivating without the downside stinging.
 
 **Trivia pool:** Mixed, roughly 40% Mobility and 60% Grab-wide playful. The room is mostly not Mobility PMs. Deep AB or HQF questions would make 80% of the audience lose, which defeats the purpose.
@@ -125,6 +127,14 @@ That sizing is deliberate. Enough to jump 10-15 ranks, not enough to beat a genu
 **Unmatched players:** Fine. They keep their driving score and stay on the leaderboard, they just do not get the bump. No fallback pairing logic, no three-way groups.
 
 **Virtual attendees:** DM their match in Slack and exchange IDs there. This is a better interaction than a nod across a crowded room.
+
+---
+
+## Reset and sessions
+
+The admin page has a **Start new game** button. Pressing it bumps a session counter in the backend; every phone snaps back to the join screen, and the waiting room and leaderboard read as empty. Old data is kept but invisible - nothing is ever deleted from the app, so the public key stays non-destructive.
+
+This is the day-to-day reset: between rehearsals, after the phone check on event morning, or for a surprise round two. A full wipe (`docs/reset.sql`, run in the Supabase dashboard) exists only for purging all data after the event.
 
 ---
 
@@ -158,7 +168,7 @@ The riskiest thing in this design is the live external backend in front of a ful
 | Free-text fun facts | Blank-page paralysis, non-comparable answers, no matching rule. Replaced by the bucket dropdown |
 | Multi-round or survival play | Does not fit a 10-minute slot. Survival is a better game but a worse event - players finish at different times |
 | Uncapped or multi-person matching | Lets one extrovert run away with it. Strict one-to-one is also self-verifying |
-| Real Grab brand assets | Public repo. Stylised approximations read clearly enough |
+| Proprietary Grab asset files (logos, fonts, images) | Public repo. Real palette plus look-alike shapes read clearly enough |
 | Hard participation gate on the final reveal | A stalled room would break the run of show |
 
 ---
@@ -172,6 +182,9 @@ The riskiest thing in this design is the live external backend in front of a ful
 ## Settled
 
 - **Wrong trivia answer:** no gain, no penalty
+- **Reset:** admin "Start new game" button, session-based - old data hidden, never deleted (owner request, 2026-08-13)
+- **Brand:** real Grab palette (Duxton tokens where available) plus look-alike shapes; no proprietary asset files in the public repo (owner approved, 2026-08-13)
+- **Exec-tier gates:** a correct answer at max tier pays +10 run points so late gates stay worth playing (design review, 2026-08-13)
 - **Paid tiers:** not needed. Free Supabase and GitHub Pages comfortably handle ~60 players. Paying buys headroom that is not the constraint; the real risks are venue network, a wrong key, or a phone browser quirk, none of which money fixes. A custom domain (~$10-15/year) is the only spend worth revisiting late, purely so the QR points somewhere tidier than a `github.io` path
 
 ---
