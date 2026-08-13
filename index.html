@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Grab Rush</title>
 <link rel="stylesheet" href="css/style.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3"></script>
 </head>
 <body>
 <main id="app">
@@ -45,13 +45,13 @@
     </div>
     <div id="question-banner"><p id="q-text"></p><div id="q-options"></div></div>
     <div id="canvas-wrap"><canvas id="game-canvas"></canvas></div>
-    <p id="controls-hint">Tap left / right to change lane</p>
+    <p id="controls-hint">Tap or click left / right to change lane (arrow keys work too)</p>
   </section>
 
   <section id="screen-results" class="screen">
     <h2>Finished!</h2>
     <p class="big-score"><span id="final-score">0</span> <span>pts</span></p>
-    <p>You finished in a <b id="final-tier">Standard</b>.</p>
+    <p>You finished in the <b id="final-tier">Standard</b> tier.</p>
     <p id="submit-status"></p>
     <div id="match-block">
       <h3>Your match</h3>

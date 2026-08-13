@@ -71,6 +71,12 @@ function onState(state) {
     return;
   }
   if (state.status === 'started' && appState === 'waiting') beginCountdown();
+  if (state.status === 'match_round' && appState === 'waiting') {
+    appState = 'results';
+    show('results');
+    $('final-score').textContent = me.score ?? 0;
+    enterMatchRound();
+  }
   if (state.status === 'match_round' && appState === 'results') enterMatchRound();
 }
 
@@ -118,8 +124,11 @@ async function onGameFinish(finalScore, tier) {
 let pollMatch = null;
 let claimWired = false;
 let connectedDone = false;
+let matchEntered = false;
 
 async function enterMatchRound() {
+  if (matchEntered) return;   // onState re-fires on every poll tick; run setup once
+  matchEntered = true;
   try {
     const row = await db.getPlayer(me.id);
     me = { ...me, ...row };
@@ -152,10 +161,12 @@ async function claim() {
   $('claim-btn').disabled = true;
   try {
     await db.claimMatch(me.id, $('claim-input').value);
-    $('claim-status').textContent = 'Saved. Waiting for them to enter yours...';
+    $('claim-status').textContent =
+      'Saved. Waiting for them to enter yours... Typo? Fix it and press again.';
     checkConnected();
   } catch (err) {
     $('claim-status').textContent = err.message;
+  } finally {
     $('claim-btn').disabled = false;
   }
 }

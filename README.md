@@ -1,4 +1,4 @@
-# Grab Rush — PM Connect ice breaker
+# Grab Rush - PM Connect ice breaker
 
 Phone-first driving game + cross-Tech-Family match round. Static site (GitHub
 Pages) + Supabase free tier. No build step.

@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Grab Rush - Control Room</title>
 <link rel="stylesheet" href="css/style.css">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3"></script>
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@04f46c6a0708418cb7b96fc563eacae0fbf77674/qrcode.min.js"></script>
 </head>
 <body class="admin">
 
@@ -15,6 +15,7 @@
     <h1 id="admin-title">Grab Rush - Control Room</h1>
     <button class="admin-btn ghost new-game">Start new game</button>
   </div>
+  <p id="admin-error" class="error"></p>
   <div id="setup-grid">
     <div>
       <div id="qr"></div>
@@ -32,7 +33,7 @@
   <div class="admin-head">
     <h1>Heat in progress</h1>
     <span id="heat-timer">93</span>
-    <span><span id="finished-count">0</span> finished</span>
+    <span><span id="finished-count">0</span> on the board</span>
     <button class="admin-btn ghost new-game">Start new game</button>
   </div>
   <table class="board"><tbody id="board-heat"></tbody></table>

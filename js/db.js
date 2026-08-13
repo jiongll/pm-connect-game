@@ -70,10 +70,15 @@ export async function submitScore(playerId, score) {
 
 export async function assignMatches(pairs, allPlayers) {
   const bySlack = new Map(allPlayers.map(p => [p.slack_id, p]));
-  await Promise.all(pairs.flatMap(([a, b]) => [
+  const results = await Promise.all(pairs.flatMap(([a, b]) => [
     client.from('players').update({ match_slack_id: b }).eq('id', bySlack.get(a).id),
     client.from('players').update({ match_slack_id: a }).eq('id', bySlack.get(b).id),
   ]));
+  const failed = results.filter(r => r.error);
+  if (failed.length) {
+    throw new Error(failed.length + ' of ' + results.length
+      + ' match writes failed - press the button again.');
+  }
 }
 
 export async function claimMatch(playerId, claimedSlackId) {

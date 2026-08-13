@@ -5,6 +5,7 @@ import { MATCH_BONUS } from './config.js';
 // two largest remaining tech-family groups. For "must differ" pairing this
 // maximises the number of pairs. Leftovers stay unmatched (fine per spec).
 export function computePairs(players) {
+  players = [...players].sort((a, b) => a.slack_id.localeCompare(b.slack_id));
   const byBucket = new Map();
   for (const p of players) {
     if (!byBucket.has(p.bucket)) byBucket.set(p.bucket, []);

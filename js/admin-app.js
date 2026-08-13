@@ -13,10 +13,15 @@ async function init() {
   $('admin-title').textContent = GAME_NAME + ' - Control Room';
 
   const playerUrl = location.href.replace(/admin\.html.*$/, '');
-  new QRCode($('qr'), { text: playerUrl, width: 300, height: 300 });
+  try { new QRCode($('qr'), { text: playerUrl, width: 300, height: 300 }); }
+  catch { /* the plain URL below is the fallback */ }
   $('player-url').textContent = playerUrl;
 
   const state = await db.getGameState();
+  if (!state) {
+    $('admin-error').textContent =
+      'Cannot reach the game server - check this laptop\'s connection and refresh.';
+  }
   const session = state ? state.session : 1;
   db.onPlayers(session, list => { players = list; render(); });
   db.onGameState(s => {
@@ -66,7 +71,7 @@ function runTimer() {
 
 async function startMatchRound() {
   const played = players.filter(p => p.score !== null && p.score !== undefined);
-  if (!confirm('Assign matches for ' + played.length + ' players who finished?')) return;
+  if (!confirm('Assign matches for ' + played.length + ' players on the board?')) return;
   try {
     const pairs = computePairs(played);
     await db.assignMatches(pairs, played);

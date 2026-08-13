@@ -214,3 +214,7 @@ The lane-gate quiz (drive through lane A/B/C to answer) is replaced:
 - Config knobs (owner request): `QUIZ_COUNT`, `QUIZ_SECONDS`, plus `QUIZ_FIRST_AT` / `QUIZ_LAST_AT` for the spawn window. The remaining game-feel constants (base speed, spawn rates, boost) also move to `js/config.js` so playtest tuning is a one-line change.
 - Accepted trade-off: a heat's wall-clock length now varies per player (90 s of driving plus time spent on quizzes), so players finish at slightly different moments and the admin countdown is approximate. Scores land as each player finishes - unchanged behaviour.
 - Visuals stay placeholder; the proper visual pass remains in Task 9 (owner: "work on that later once we have gotten the mechanics sorted").
+
+### 2026-08-14 - score:0 at join, from the final review
+
+Joiners are inserted with `score: 0` rather than the plan's null (js/db.js), because the live schema has no column default to fall back on. Accepted trade-off: the admin heat-view counter therefore counts players on the board (everyone who has joined), not players who have finished their run - relabelled from "finished" to "on the board" (admin.html, js/admin-app.js) so the copy matches what the number actually measures. Consequence: late finishers - anyone still mid-heat when the match round starts - stay matchable, since they already pass the `score !== null` filter used for match assignment.
