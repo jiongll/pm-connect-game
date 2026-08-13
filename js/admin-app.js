@@ -1,6 +1,6 @@
 import { GAME_NAME, MATCH_BONUS, HEAT_DURATION_MS } from './config.js';
 import * as db from './db.js';
-import { buildLeaderboard } from './pairing.js';
+import { buildLeaderboard, computePairs, connectionStats } from './pairing.js';
 
 const $ = id => document.getElementById(id);
 let players = [];
@@ -27,6 +27,7 @@ async function init() {
   if (state) setPhase(state.status);
 
   $('start-heat').addEventListener('click', startHeat);
+  $('start-match').addEventListener('click', startMatchRound);
   for (const b of document.querySelectorAll('.new-game')) b.addEventListener('click', newGame);
 }
 
@@ -63,6 +64,18 @@ function runTimer() {
   }, 250);
 }
 
+async function startMatchRound() {
+  const played = players.filter(p => p.score !== null && p.score !== undefined);
+  if (!confirm('Assign matches for ' + played.length + ' players who finished?')) return;
+  try {
+    const pairs = computePairs(played);
+    await db.assignMatches(pairs, played);
+    await db.setGameStatus('match_round');
+  } catch (err) {
+    alert('Match assignment failed: ' + err.message);
+  }
+}
+
 function render() {
   $('join-count').textContent = players.length;
   $('join-list').innerHTML = players.map(p =>
@@ -78,6 +91,9 @@ function render() {
   $('board-heat').innerHTML = html;
   $('board-match').innerHTML = html;
   $('finished-count').textContent = rows.length;
+
+  const stats = connectionStats(players);
+  $('connected-count').textContent = stats.connected + ' of ' + stats.total + ' connected';
 }
 
 function esc(s) {
