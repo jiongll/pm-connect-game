@@ -1,8 +1,9 @@
-import { HEAT_DURATION_MS, TIER_BONUS } from './config.js';
+import { HEAT_DURATION_MS, TIER_BONUS, BASE_SPEED, COIN_EVERY, OBSTACLE_EVERY,
+         BOOST_MULTIPLIER, BOOST_SECONDS, QUIZ_COUNT, QUIZ_SECONDS,
+         QUIZ_FIRST_AT, QUIZ_LAST_AT } from './config.js';
 import * as S from './scoring.js';
 
 const TIER_COLORS = ['#00b45e', '#0e8f8f', '#3d3f66', '#15151a'];
-const GATE_TIMES = [12, 26, 40, 54, 68, 82];
 
 export function startGame(canvas, hud, questions, onFinish) {
   const ctx = canvas.getContext('2d');
@@ -25,22 +26,31 @@ export function startGame(canvas, hud, questions, onFinish) {
   const laneCenter = i => roadLeft() + laneWidth() * (i + 0.5);
   const carY = () => H - 130;
 
+  // VIP pickup schedule: QUIZ_COUNT spawns spread evenly across the heat.
+  const quizTimes = [];
+  for (let i = 0; i < QUIZ_COUNT; i++) {
+    quizTimes.push(QUIZ_COUNT === 1 ? QUIZ_FIRST_AT
+      : QUIZ_FIRST_AT + i * (QUIZ_LAST_AT - QUIZ_FIRST_AT) / (QUIZ_COUNT - 1));
+  }
+
   let elapsed = 0, last = null, raf = null, finished = false;
   let carLane = 1, tier = 0, score = 0;
-  let coins = [], obstacles = [], gate = null;
+  let coins = [], obstacles = [], vip = null, quiz = null;
   let dashOffset = 0, coinTimer = 0.4, obstacleTimer = 1.2;
-  let nextGate = 0, qIndex = 0;
+  let nextQuiz = 0, qIndex = 0;
   let boostUntil = -1, invulnUntil = -1, feedback = null;
 
   function moveLeft() { carLane = Math.max(0, carLane - 1); }
   function moveRight() { carLane = Math.min(2, carLane + 1); }
   function onPointer(e) {
+    if (quiz) return;                          // frozen while answering
     const x = (e.touches ? e.touches[0].clientX : e.clientX)
       - canvas.getBoundingClientRect().left;
     if (x < W / 2) moveLeft(); else moveRight();
     e.preventDefault();
   }
   function onKey(e) {
+    if (quiz) return;
     if (e.key === 'ArrowLeft') moveLeft();
     if (e.key === 'ArrowRight') moveRight();
   }
@@ -48,10 +58,69 @@ export function startGame(canvas, hud, questions, onFinish) {
   window.addEventListener('keydown', onKey);
 
   function speed() {
-    let s = 340 * S.tierSpeedMultiplier(tier);
-    if (gate) s *= 0.45;                      // reading time
-    if (elapsed < boostUntil) s *= 1.4;       // correct-answer boost
+    let s = BASE_SPEED * S.tierSpeedMultiplier(tier);
+    if (elapsed < boostUntil) s *= BOOST_MULTIPLIER;   // correct-answer boost
     return s;
+  }
+
+  function openQuiz(q) {
+    hud.question.textContent = q.q;
+    hud.options.textContent = '';
+    const btns = q.options.map((opt, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'q-opt';
+      b.textContent = opt;
+      b.addEventListener('click', () => settle(i));
+      hud.options.appendChild(b);
+      return b;
+    });
+    let timerEl = hud.banner.querySelector('.q-timer');
+    if (!timerEl) {
+      timerEl = document.createElement('p');
+      timerEl.className = 'q-timer';
+      hud.banner.appendChild(timerEl);
+    }
+    let secondsLeft = QUIZ_SECONDS;
+    timerEl.textContent = secondsLeft + 's to answer';
+    quiz = {
+      q, btns, timerEl, settled: false,
+      interval: setInterval(() => {
+        secondsLeft -= 1;
+        timerEl.textContent = Math.max(0, secondsLeft) + 's to answer';
+      }, 1000),
+      timeout: setTimeout(() => settle(-1), QUIZ_SECONDS * 1000),
+    };
+    hud.banner.classList.add('visible');
+  }
+
+  function settle(picked) {                    // picked -1 = time ran out
+    if (!quiz || quiz.settled) return;
+    quiz.settled = true;
+    clearInterval(quiz.interval); clearTimeout(quiz.timeout);
+    quiz.timerEl.textContent = '';
+    for (const b of quiz.btns) b.disabled = true;
+    const correct = picked === quiz.q.correct;
+    quiz.btns[quiz.q.correct].classList.add('right');
+    if (!correct && picked >= 0) quiz.btns[picked].classList.add('wrong');
+    setTimeout(() => resume(correct, picked), 900);  // beat to read the reveal
+  }
+
+  function resume(correct, picked) {
+    if (finished) return;
+    hud.banner.classList.remove('visible');
+    const atMax = tier === S.TIERS.length - 1;   // already Exec
+    tier = S.answerQuestion(tier, correct);
+    if (correct && atMax) score += TIER_BONUS;   // Exec: quizzes stay worth taking
+    if (correct) boostUntil = elapsed + BOOST_SECONDS;
+    feedback = correct
+      ? { text: atMax ? 'Exec bonus +' + TIER_BONUS + '!'
+                      : 'Upgraded to ' + S.TIERS[tier] + '!',
+          until: elapsed + 1.5, good: true }
+      : { text: picked < 0 ? 'Time ran out - no change' : 'Not quite - no change',
+          until: elapsed + 1.5, good: false };
+    invulnUntil = elapsed + 0.8;                 // grace while the road restarts
+    quiz = null;
   }
 
   function update(dt) {
@@ -62,25 +131,21 @@ export function startGame(canvas, hud, questions, onFinish) {
     coinTimer -= dt;
     if (coinTimer <= 0) {
       coins.push({ lane: Math.floor(Math.random() * 3), y: -30 });
-      coinTimer = 0.65;
+      coinTimer = COIN_EVERY;
     }
     obstacleTimer -= dt;
-    if (obstacleTimer <= 0 && !gate) {        // fair: no cones while reading
+    if (obstacleTimer <= 0) {
       obstacles.push({ lane: Math.floor(Math.random() * 3), y: -40 });
-      obstacleTimer = 1.6;
+      obstacleTimer = OBSTACLE_EVERY;
     }
-    if (nextGate < GATE_TIMES.length && elapsed >= GATE_TIMES[nextGate]) {
-      gate = { y: -60, q: questions[qIndex % questions.length] };
-      qIndex++; nextGate++;
-      hud.question.textContent = gate.q.q;
-      hud.options.textContent = gate.q.options
-        .map((o, i) => 'ABC'[i] + ': ' + o).join('   ');
-      hud.banner.classList.add('visible');
+    if (!vip && nextQuiz < quizTimes.length && elapsed >= quizTimes[nextQuiz]) {
+      vip = { lane: Math.floor(Math.random() * 3), y: -40 };
+      nextQuiz++;
     }
 
     for (const c of coins) c.y += dy;
     for (const o of obstacles) o.y += dy;
-    if (gate) gate.y += dy;
+    if (vip) vip.y += dy;
 
     coins = coins.filter(c => {
       const near = Math.abs(c.y - carY()) < 46;
@@ -101,19 +166,15 @@ export function startGame(canvas, hud, questions, onFinish) {
       return o.y < H + 60;
     });
 
-    if (gate && gate.y >= carY()) {
-      const correct = carLane === gate.q.correct;
-      const atMax = tier === S.TIERS.length - 1;   // already Exec
-      tier = S.answerQuestion(tier, correct);
-      if (correct && atMax) score += TIER_BONUS;   // Exec: late gates stay worth playing
-      feedback = correct
-        ? { text: atMax ? 'Exec bonus +' + TIER_BONUS + '!'
-                        : 'Upgraded to ' + S.TIERS[tier] + '!',
-            until: elapsed + 1.5, good: true }
-        : { text: 'Not quite - no change', until: elapsed + 1.5, good: false };
-      if (correct) boostUntil = elapsed + 2;
-      gate = null;
-      hud.banner.classList.remove('visible');
+    if (vip) {
+      if (Math.abs(vip.y - carY()) < 50 && vip.lane === carLane) {
+        const q = questions[qIndex % questions.length];
+        qIndex++;
+        vip = null;
+        openQuiz(q);
+      } else if (vip.y > H + 60) {
+        vip = null;                              // missed - that quiz is gone
+      }
     }
 
     hud.score.textContent = score;
@@ -166,16 +227,13 @@ export function startGame(canvas, hud, questions, onFinish) {
       ctx.fillStyle = '#fff'; ctx.fillRect(x - 12, o.y + 2, 24, 6);
     }
 
-    if (gate) {                                // answer gates A / B / C
-      for (let i = 0; i < 3; i++) {
-        const x = laneCenter(i), w = laneWidth() - 14;
-        ctx.fillStyle = 'rgba(0, 177, 79, 0.25)';
-        ctx.fillRect(x - w / 2, gate.y - 34, w, 68);
-        ctx.strokeStyle = '#00b14f'; ctx.lineWidth = 3;
-        ctx.strokeRect(x - w / 2, gate.y - 34, w, 68);
-        ctx.fillStyle = '#fff'; ctx.font = 'bold 30px system-ui';
-        ctx.fillText('ABC'[i], x, gate.y);
-      }
+    if (vip) {                                 // the VIP pickup - hit it for a quiz
+      const x = laneCenter(vip.lane);
+      ctx.fillStyle = '#ffd76a';
+      ctx.beginPath(); ctx.arc(x, vip.y, 20, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#fff3c4'; ctx.lineWidth = 3; ctx.stroke();
+      ctx.fillStyle = '#3a2c00'; ctx.font = 'bold 13px system-ui';
+      ctx.fillText('VIP', x, vip.y + 1);
     }
 
     const cx = laneCenter(carLane), cy = carY();   // the car, tier-coloured
@@ -202,6 +260,7 @@ export function startGame(canvas, hud, questions, onFinish) {
     if (finished) return;
     finished = true;
     cancelAnimationFrame(raf);
+    if (quiz) { clearInterval(quiz.interval); clearTimeout(quiz.timeout); }
     canvas.removeEventListener('pointerdown', onPointer);
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', resize);
@@ -212,8 +271,10 @@ export function startGame(canvas, hud, questions, onFinish) {
     if (last === null) last = ts;
     const dt = Math.min((ts - last) / 1000, 0.05);  // clamp background-tab jumps
     last = ts;
-    update(dt);
-    draw();
+    if (!quiz) {                               // world and heat clock freeze mid-quiz
+      update(dt);
+      draw();
+    }
     if (elapsed * 1000 >= HEAT_DURATION_MS) { end(); return; }
     raf = requestAnimationFrame(frame);
   }
