@@ -218,3 +218,19 @@ The lane-gate quiz (drive through lane A/B/C to answer) is replaced:
 ### 2026-08-14 - score:0 at join, from the final review
 
 Joiners are inserted with `score: 0` rather than the plan's null (js/db.js), because the live schema has no column default to fall back on. Accepted trade-off: the admin heat-view counter therefore counts players on the board (everyone who has joined), not players who have finished their run - relabelled from "finished" to "on the board" (admin.html, js/admin-app.js) so the copy matches what the number actually measures. Consequence: late finishers - anyone still mid-heat when the match round starts - stay matchable, since they already pass the `score !== null` filter used for match assignment.
+
+### 2026-08-16 - Playtest round 2: the bonus round replaces assigned matching
+
+From the owner's second playtest. Six changes, plus the real Tech Family list.
+
+1. **@ prefix on both ID inputs.** The join form and the partner claim box show a fixed @ inside the field so nobody types "@abc". UI only - the client already strips a leading @ and lowercases on join and on claim (`normaliseSlackId`).
+2. **Hard stop at 90 seconds, wall clock.** The heat clock now runs through quiz pauses (the quiz still freezes the road, not the clock), so every phone stops at the same moment. A quiz open at the buzzer is force-closed: unanswered = no gain, no penalty. Accepted side effect: slow quiz answers eat driving time.
+3. **Username on screen.** Small @name in the game HUD; BIG on the bonus screen, so you can show your phone to the person you meet.
+4. **The bonus round replaces system matching.** No assigned pairs, no second host button. When the heat ends, every phone flips to the bonus round on its own: find someone from a DIFFERENT Tech Family who travels the SAME way as you, swap Slack IDs, and BOTH type each other's ID within 90 seconds. Mutual claims that pass the rules get +35 each (display-only, as before). One pair per person falls out of the model: a single `claimed_match` column per player means nobody can be half of two mutual pairs. Live feedback under the claim box: not found / that's you / same Tech Family / doesn't travel the same way / already paired / saved / connected. At zero the entry locks and the big screen becomes the final leaderboard.
+   Implementation: all screens derive the stage from `game_state.started_at` alone (heat = start to +93 s, bonus to +183 s, then over). `status` stays `'started'` for the whole game - zero schema changes; `match_slack_id` simply goes unused.
+5. **Score popups at the action.** Gold +2 on the coin, red -5 at the crash, +10 on a correct VIP answer - float up and fade in under a second. Numbers read from config.
+6. **Six-tier vehicle ladder.** GrabBike -> GrabTukTuk -> Standard -> Plus -> Premium -> Exec. The drawing changes at every step (all canvas-drawn, no Grab asset files); one step per correct VIP answer, so Exec needs 5 of the 6 VIPs.
+
+Tech Families (confirmed): ACE, BTP, COREX, Data Product, Ecomm, Geo & IoT, PSPO, FS, Integrity, Mobility, FF, SPA, GFB, Other.
+
+Also fixed en route: the admin heat timer used to anchor to page load, so a mid-heat refresh restarted the 93 s display; it now anchors to `started_at` like everything else.
