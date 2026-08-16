@@ -144,3 +144,166 @@ body.admin #bonus-timer { font-size: 4rem; font-weight: 800; color: #ffd76a; }
 body.admin #bonus-rule { color: #cfe3d6; font-size: 1.3rem; margin: .4rem 0 1rem; }
 body.admin #gate-box { max-width: 420px; margin: 18vh auto 0; display: flex; flex-direction: column; gap: 1rem; }
 body.admin #gate-error { color: #ff7a7a; min-height: 1.2em; margin: 0; }
+
+/* ── Delight pass: entry (R1, R3) ───────────────────────────────── */
+.road-strip {
+  height: 6px; border-radius: 3px; margin: .2rem 0 1rem;
+  background: repeating-linear-gradient(90deg,
+    #2c2c35 0 34px, #f2f5f3 34px 52px);
+  animation: roadScroll 2s linear infinite;
+}
+@keyframes roadScroll {
+  from { background-position: 0 0; }
+  to { background-position: -104px 0; }
+}
+
+/* ── Delight pass: screen transitions (R4) ──────────────────────── */
+.screen.active { animation: screenIn 250ms ease-out; }
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── Delight pass: waiting room (R5, R6) ────────────────────────── */
+#screen-waiting #grid-count { color: #f2f5f3; font-weight: 700; }
+#tip-line { min-height: 2.6em; margin-top: 2rem; transition: opacity 250ms; }
+
+/* ── Delight pass: warm-up garage (R7, R8) ──────────────────────── */
+#warmup { margin-top: 1.6rem; }
+#warmup-canvas {
+  width: 100%; height: 140px; display: block;
+  border-radius: 12px; touch-action: none;
+}
+.warmup-hint { font-size: .85rem; }
+#ladder-line { font-size: .85rem; margin-top: .4rem; }
+#rung-dots { display: flex; justify-content: center; gap: .45rem; margin-top: .5rem; }
+#rung-dots i { width: 8px; height: 8px; border-radius: 50%; background: #2c3a31; }
+#rung-dots i.lit { background: #00b14f; }
+
+/* ── Delight pass: countdown (R9) ───────────────────────────────── */
+#count-num.pop { animation: digitPop 300ms ease-out; }
+@keyframes digitPop {
+  from { transform: scale(1.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+#count-num.c3 { color: #00b14f; }
+#count-num.c2 { color: #ffb54d; }
+#count-num.c1 { color: #ffd76a; }
+#go-flash {
+  position: absolute; inset: 0; z-index: 6; pointer-events: none;
+  display: none; align-items: center; justify-content: center;
+  font-size: 5.5rem; font-weight: 800; color: #00b14f;
+  text-shadow: 0 4px 24px rgba(0, 177, 79, .45);
+}
+#go-flash.show { display: flex; animation: goSlam 400ms ease-out; }
+@keyframes goSlam {
+  from { transform: scale(.8); opacity: .4; }
+  to { transform: scale(1.2); opacity: 1; }
+}
+
+/* ── Delight pass: crash feedback (R15) ─────────────────────────── */
+#crash-flash {
+  position: absolute; inset: 0; z-index: 4; pointer-events: none;
+  box-shadow: inset 0 0 60px 18px rgba(255, 60, 40, .9);
+  opacity: 0; transition: opacity 200ms;
+}
+
+/* ── Delight pass: HUD pulses (R18, R27) ────────────────────────── */
+#hud .bump { display: inline-block; animation: hudBump 150ms ease-out; }
+@keyframes hudBump {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+
+/* ── Delight pass: quiz overlay (R22, R23) ──────────────────────── */
+#question-banner.visible { animation: quizIn 150ms ease-out; }
+@keyframes quizIn {
+  from { opacity: 0; transform: scale(.94); }
+  to { opacity: 1; transform: none; }
+}
+.q-opt { animation: optIn 200ms ease-out backwards; }
+@keyframes optIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+#q-bar { height: 4px; margin-top: .8rem; border-radius: 2px; background: #ffd76a; width: 100%; }
+
+/* ── Delight pass: final ten seconds (R24) ──────────────────────── */
+#hud b.final10 {
+  color: #ffb54d; display: inline-block;
+  animation: timePulse 1s ease-in-out infinite;
+}
+@keyframes timePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* ── Delight pass: bonus interstitial (R28) ─────────────────────── */
+#bonus-interstitial {
+  position: fixed; inset: 0; z-index: 20;
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(4, 14, 9, .96); text-align: center; padding: 1.4rem;
+}
+#bonus-interstitial.show { display: flex; }
+.bi-title { font-size: 3rem; font-weight: 800; color: #ffd76a; animation: biIn 200ms ease-out; }
+.bi-sub { margin-top: .8rem; font-size: 1.2rem; color: #f2f5f3; }
+@keyframes biIn {
+  from { transform: scale(.7); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ── Delight pass: name-tag bonus screen (R29, R30, R32, R36) ───── */
+.self-id { cursor: pointer; }
+#copy-toast { color: #9db3a6; font-size: .85rem; min-height: 1.2em; margin: 0 0 .3rem; }
+#self-badges { display: flex; gap: .5rem; margin: .3rem 0 .4rem; }
+.badge {
+  padding: .45rem .9rem; border-radius: 999px;
+  font-size: 1.05rem; font-weight: 800;
+  background: #13241b; border: 2px solid #00b14f; color: #d9fcde;
+}
+#badge-rule { color: #cfe3d6; margin-bottom: .5rem; }
+#pair-count { color: #ffd76a; font-weight: 700; min-height: 1.2em; margin-top: .5rem; }
+#remote-line { color: #9db3a6; font-size: .9rem; margin-top: .6rem; }
+
+/* ── Delight pass: celebration + openers (R31, R33) ─────────────── */
+#opener-card {
+  display: none; margin-top: .8rem; padding: .9rem 1rem;
+  border-radius: 12px; background: #0e1f16; border: 1px solid #1e4a33;
+}
+#opener-card .opener-head { font-weight: 800; color: #00b14f; }
+#opener-card p { margin: .25rem 0; }
+#opener-generic { color: #9db3a6; font-size: .9rem; }
+#celebrate {
+  position: fixed; inset: 0; z-index: 30; display: none;
+  align-items: center; justify-content: center; pointer-events: none;
+}
+#celebrate.show { display: flex; animation: celebrateFade 900ms ease-out forwards; }
+@keyframes celebrateFade {
+  0% { background: rgba(0, 177, 79, .45); }
+  20% { background: rgba(0, 177, 79, .12); }
+  100% { background: rgba(0, 177, 79, 0); }
+}
+#celebrate-emoji { font-size: 5rem; animation: emojiIn 500ms cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes emojiIn {
+  from { transform: scale(.2); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+#celebrate i {
+  position: absolute; top: -12px; width: 8px; height: 12px;
+  animation: confettiFall 800ms linear forwards;
+}
+@keyframes confettiFall {
+  to { transform: translateY(105vh) rotate(340deg); opacity: .1; }
+}
+
+/* ── Delight pass: bonus endgame + rank (R34, R50) ──────────────── */
+#screen-results #bonus-timer.urgent {
+  color: #ff8f81;
+  animation: urgentPulse 1s ease-in-out infinite;
+}
+@keyframes urgentPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+#rank-line { color: #ffd76a; font-weight: 800; font-size: 1.1rem; min-height: 1.2em; }

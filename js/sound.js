@@ -87,3 +87,20 @@ export function playFinish() {               // buzzer: rising three-note fanfar
   tone(523, 0.15, { type: 'square', at: 0.14, peak: 0.6 });
   tone(784, 0.35, { type: 'square', at: 0.28, peak: 0.6 });
 }
+
+export function playSoftTick() {              // final-10 heartbeat - well under the coin blip
+  if (!ready()) return;
+  tone(740, 0.05, { type: 'sine', peak: 0.25 });
+}
+
+export function playBonusSting() {            // bonus-round slam: two rising notes
+  if (!ready()) return;
+  tone(523, 0.14, { type: 'square', peak: 0.6 });
+  tone(880, 0.3, { type: 'square', at: 0.13, peak: 0.6 });
+}
+
+export function playChime() {                 // connection made: soft two-note rise
+  if (!ready()) return;
+  tone(784, 0.12, { type: 'triangle', peak: 0.7 });
+  tone(1175, 0.28, { type: 'triangle', at: 0.1, peak: 0.7 });
+}

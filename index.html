@@ -13,6 +13,7 @@
   <section id="screen-entry" class="screen active">
     <h1 id="game-title">Grab Rush</h1>
     <p class="tagline">One heat. 90 seconds. Bragging rights.</p>
+    <div class="road-strip" aria-hidden="true"></div>
     <label>Slack ID (this is your name on the leaderboard)
       <span class="id-field"><span class="at">@</span><input id="slack-id"
              placeholder="jionglin.low" autocomplete="off"
@@ -24,14 +25,22 @@
     <label><span id="bucket-label"></span>
       <select id="bucket"></select>
     </label>
-    <button id="join-btn" class="primary">Join the waiting room</button>
+    <button id="join-btn" class="primary">Join the starting grid</button>
     <p id="entry-error" class="error"></p>
   </section>
 
   <section id="screen-waiting" class="screen">
-    <h2>You're in, <span id="waiting-name"></span></h2>
+    <h2>You're on the grid, <span id="waiting-name"></span></h2>
     <p>Eyes on the big screen. The heat starts when the host says go.</p>
+    <p id="grid-count"></p>
     <div class="pulse"></div>
+    <p id="tip-line"></p>
+    <div id="warmup">
+      <canvas id="warmup-canvas"></canvas>
+      <p class="warmup-hint">Warm up - tap left / right.</p>
+      <p id="ladder-line"></p>
+      <div id="rung-dots" aria-hidden="true"><i class="lit"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    </div>
   </section>
 
   <section id="screen-countdown" class="screen">
@@ -45,8 +54,8 @@
       <span id="hud-tier">GrabBike</span>
       <span><b id="hud-time">90</b>s</span>
     </div>
-    <div id="question-banner"><p class="q-head">Bonus question!</p><p id="q-text"></p><div id="q-options"></div></div>
-    <div id="canvas-wrap"><canvas id="game-canvas"></canvas></div>
+    <div id="question-banner"><p class="q-head">Bonus question!</p><p id="q-text"></p><div id="q-bar"></div><div id="q-options"></div></div>
+    <div id="canvas-wrap"><canvas id="game-canvas"></canvas><div id="go-flash"></div><div id="crash-flash"></div></div>
     <p id="controls-hint">Tap or click left / right to change lane (arrow keys work too)</p>
   </section>
 
@@ -55,12 +64,15 @@
     <p class="big-score"><span id="final-score">0</span> <span>pts</span></p>
     <p>You finished in the <b id="final-tier">GrabBike</b> tier.</p>
     <p id="submit-status"></p>
+    <p id="rank-line"></p>
     <div id="match-block">
       <h3>Bonus round</h3>
       <p id="bonus-timer"></p>
       <p class="self-label">You are</p>
-      <p class="self-id" id="self-id"></p>
-      <p class="self-label">Show this screen when you meet someone.</p>
+      <p class="self-id" id="self-id" title="Tap to copy"></p>
+      <p id="copy-toast"></p>
+      <div id="self-badges"><span class="badge" id="badge-tf"></span><span class="badge" id="badge-bucket"></span></div>
+      <p id="badge-rule">Pair with someone where <b>both</b> badges differ. Show them this screen.</p>
       <p id="match-instructions"></p>
       <div id="claim-form">
         <span class="id-field"><span class="at">@</span><input id="claim-input"
@@ -69,8 +81,22 @@
         <button id="claim-btn" class="primary">We met - confirm</button>
       </div>
       <p id="claim-status"></p>
+      <p id="pair-count"></p>
+      <p id="remote-line"><b>Joining remotely?</b> Drop your @id in the session Slack thread - anyone, anywhere can pair with you.</p>
+      <div id="opener-card">
+        <p class="opener-head" id="opener-head"></p>
+        <p id="opener-prompt"></p>
+        <p id="opener-generic">What's your Tech Family actually building?</p>
+      </div>
     </div>
   </section>
+
+  <div id="bonus-interstitial" aria-hidden="true">
+    <p class="bi-title">BONUS ROUND</p>
+    <p class="bi-sub" id="bi-sub"></p>
+  </div>
+
+  <div id="celebrate" aria-hidden="true"></div>
 
 </main>
 <script type="module" src="js/player-app.js"></script>
