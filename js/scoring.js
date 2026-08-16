@@ -1,6 +1,6 @@
 import { COIN_POINTS, COLLISION_PENALTY, TIER_BONUS, TIER_SPEED_STEP, MAGNET_TIER } from './config.js';
 
-export const TIERS = ['GrabBike', 'GrabTukTuk', 'Standard', 'Plus', 'Premium', 'Exec'];
+export const TIERS = ['GrabBike', 'GrabTukTuk', 'Standard', 'Plus', '6 Seater', 'Premium', 'Exec'];
 
 export function collectCoin(score) { return score + COIN_POINTS; }
 export function hitObstacle(score) { return Math.max(0, score - COLLISION_PENALTY); }

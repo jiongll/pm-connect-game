@@ -84,6 +84,10 @@ label .id-field { margin-top: .35rem; }
   order: -1; color: #ffd76a; font-weight: 800;
   font-size: 1.05rem; margin-bottom: .8rem; min-height: 1.3em;
 }
+.q-head {
+  color: #F5A623; font-weight: 800; font-size: 1rem;
+  letter-spacing: .04em; text-transform: uppercase; margin-bottom: .3rem;
+}
 #canvas-wrap { flex: 1; position: relative; }
 #game-canvas { position: absolute; inset: 0; touch-action: none; }
 #controls-hint { text-align: center; padding: .45rem; color: #9db3a6; font-size: .85rem; }

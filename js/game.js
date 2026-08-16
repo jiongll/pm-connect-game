@@ -4,16 +4,25 @@ import { HEAT_DURATION_MS, TIER_BONUS, COIN_POINTS, COLLISION_PENALTY,
          QUIZ_FIRST_AT, QUIZ_LAST_AT } from './config.js';
 import * as S from './scoring.js';
 
-const TIER_COLORS = ['#2ec46a', '#ffb54d', '#00b14f', '#17b5a6', '#3d3f66', '#15151a'];
+// Grab app visual language: white fleet, green glass, charcoal wheels,
+// dark premium tiers. One palette, used by every drawing below.
+const GRAB_GREEN = '#00B14F';
+const BODY_WHITE = '#F2F4F5';
+const WHEEL_DARK = '#2A2E32';
+const WHEEL_HUB = '#C9CED2';
+const WIN_FILL = '#7DDFA8';
+const WIN_EDGE = '#00B14F';
+const GOLD = '#F5A623';
 const POPUP_LIFE = 0.9;                          // seconds a score popup lives
 
-// Car liveries, Standard to Exec: longer and fancier each step up.
-// Indices 0-1 (bike, tuk-tuk) have their own drawing functions.
+// Car liveries, Standard to Exec. Indices 0-1 (GrabBike, GrabTukTuk)
+// have their own drawing functions.
 const CAR_STYLE = [null, null,
-  { stretch: 0, stripe: false, spoiler: false },   // Standard
-  { stretch: 0, stripe: true,  spoiler: false },   // Plus
-  { stretch: 4, stripe: true,  spoiler: true  },   // Premium
-  { stretch: 8, stripe: true,  spoiler: true  },   // Exec
+  { body: BODY_WHITE, stretch: 0,  van: false, sparkle: false, trim: null,      winAlpha: 1 },   // Standard
+  { body: BODY_WHITE, stretch: 0,  van: false, sparkle: true,  trim: null,      winAlpha: 1 },   // Plus
+  { body: BODY_WHITE, stretch: 10, van: true,  sparkle: false, trim: null,      winAlpha: 1 },   // 6 Seater
+  { body: '#26292C',  stretch: 4,  van: false, sparkle: false, trim: null,      winAlpha: .55 }, // Premium
+  { body: '#101214',  stretch: 12, van: true,  sparkle: false, trim: '#D4A94E', winAlpha: .4 },  // Exec
 ];
 
 export function startGame(canvas, hud, questions, onFinish) {
@@ -37,7 +46,7 @@ export function startGame(canvas, hud, questions, onFinish) {
   const laneCenter = i => roadLeft() + laneWidth() * (i + 0.5);
   const carY = () => H - 130;
 
-  // VIP pickup schedule: QUIZ_COUNT spawns spread evenly across the heat.
+  // Question-coin schedule: QUIZ_COUNT spawns spread evenly across the heat.
   const quizTimes = [];
   for (let i = 0; i < QUIZ_COUNT; i++) {
     quizTimes.push(QUIZ_COUNT === 1 ? QUIZ_FIRST_AT
@@ -46,7 +55,7 @@ export function startGame(canvas, hud, questions, onFinish) {
 
   let elapsed = 0, wall = 0, last = null, raf = null, finished = false;
   let carLane = 1, tier = 0, score = 0;
-  let coins = [], obstacles = [], vip = null, quiz = null, popups = [];
+  let coins = [], obstacles = [], quizCoin = null, quiz = null, popups = [];
   let dashOffset = 0, coinTimer = 0.4, obstacleTimer = 1.2;
   let nextQuiz = 0, qIndex = 0;
   let boostUntil = -1, invulnUntil = -1, feedback = null;
@@ -154,14 +163,14 @@ export function startGame(canvas, hud, questions, onFinish) {
       obstacles.push({ lane: Math.floor(Math.random() * 3), y: -40 });
       obstacleTimer = OBSTACLE_EVERY;
     }
-    if (!vip && nextQuiz < quizTimes.length && wall >= quizTimes[nextQuiz]) {
-      vip = { lane: Math.floor(Math.random() * 3), y: -40 };
+    if (!quizCoin && nextQuiz < quizTimes.length && wall >= quizTimes[nextQuiz]) {
+      quizCoin = { lane: Math.floor(Math.random() * 3), y: -40 };
       nextQuiz++;
     }
 
     for (const c of coins) c.y += dy;
     for (const o of obstacles) o.y += dy;
-    if (vip) vip.y += dy;
+    if (quizCoin) quizCoin.y += dy;
 
     coins = coins.filter(c => {
       const near = Math.abs(c.y - carY()) < 46;
@@ -186,14 +195,14 @@ export function startGame(canvas, hud, questions, onFinish) {
       return o.y < H + 60;
     });
 
-    if (vip) {
-      if (Math.abs(vip.y - carY()) < 50 && vip.lane === carLane) {
+    if (quizCoin) {
+      if (Math.abs(quizCoin.y - carY()) < 50 && quizCoin.lane === carLane) {
         const q = questions[qIndex % questions.length];
         qIndex++;
-        vip = null;
+        quizCoin = null;
         openQuiz(q);
-      } else if (vip.y > H + 60) {
-        vip = null;                              // missed - that quiz is gone
+      } else if (quizCoin.y > H + 60) {
+        quizCoin = null;                         // missed - that quiz is gone
       }
     }
 
@@ -212,15 +221,15 @@ export function startGame(canvas, hud, questions, onFinish) {
     ctx.closePath();
   }
 
-  function drawCoin(x, y) {                    // stylised Grab Coin
+  function drawCoin(x, y) {                    // GrabCoin: gold ring, warm disc, bold G
     ctx.save();
-    ctx.shadowColor = 'rgba(0, 177, 79, 0.7)'; ctx.shadowBlur = 9;
-    ctx.fillStyle = '#00b14f';
+    ctx.shadowColor = 'rgba(245, 166, 35, 0.7)'; ctx.shadowBlur = 9;
+    ctx.fillStyle = GOLD;
     ctx.beginPath(); ctx.arc(x, y, 16, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = '#d9fcde'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 15px system-ui';
+    ctx.fillStyle = '#FFC94D';
+    ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#8A5A00'; ctx.font = 'bold 15px system-ui';
     ctx.fillText('G', x, y + 1);
   }
 
@@ -238,22 +247,20 @@ export function startGame(canvas, hud, questions, onFinish) {
     ctx.fillRect(x - 19, y + 14, 38, 5);
   }
 
-  function drawVip(x, y) {                     // the VIP pickup - hit it for a quiz
+  function drawQuizCoin(x, y) {                // mystery coin - drive into it for a question
     const pulse = 1 + 0.08 * Math.sin(elapsed * 6);
     ctx.save();
-    ctx.strokeStyle = 'rgba(255, 215, 106, 0.5)'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(x, y, 27 * pulse, 0, Math.PI * 2); ctx.stroke();
-    ctx.shadowColor = 'rgba(255, 215, 106, 0.9)'; ctx.shadowBlur = 14;
-    ctx.fillStyle = '#ffd76a';
-    ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = 'rgba(245, 166, 35, 0.5)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x, y, 38 * pulse, 0, Math.PI * 2); ctx.stroke();
+    ctx.shadowColor = 'rgba(245, 166, 35, 0.9)'; ctx.shadowBlur = 14;
+    ctx.fillStyle = GOLD;
+    ctx.beginPath(); ctx.arc(x, y, 30, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = '#fff3c4'; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.arc(x, y, 20, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = '#3a2c00';
-    ctx.font = 'bold 10px system-ui';
-    ctx.fillText('★', x, y - 6);
-    ctx.font = 'bold 12px system-ui';
-    ctx.fillText('VIP', x, y + 6);
+    ctx.fillStyle = '#FFC94D';
+    ctx.beginPath(); ctx.arc(x, y, 23, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#8A5A00';
+    ctx.font = 'bold 30px system-ui';
+    ctx.fillText('?', x, y + 1);
   }
 
   function drawVehicle(cx, cy) {               // the player, one drawing per tier
@@ -267,29 +274,63 @@ export function startGame(canvas, hud, questions, onFinish) {
     ctx.globalAlpha = 1;
   }
 
-  function drawBike(cx, cy) {                  // GrabBike: two wheels and a rider
-    ctx.fillStyle = '#111116';                 // wheels
-    ctx.beginPath(); ctx.arc(cx, cy - 30, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx, cy + 30, 11, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = TIER_COLORS[0];          // frame
-    ctx.lineWidth = 7; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(cx, cy - 26); ctx.lineTo(cx, cy + 26); ctx.stroke();
-    ctx.strokeStyle = '#15151a';               // handlebar
-    ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.moveTo(cx - 16, cy - 18); ctx.lineTo(cx + 16, cy - 18); ctx.stroke();
-    ctx.lineCap = 'butt';
-    ctx.fillStyle = TIER_COLORS[0];            // rider: shoulders + helmet
-    ctx.beginPath(); ctx.ellipse(cx, cy + 8, 14, 18, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#d9fcde';
-    ctx.beginPath(); ctx.arc(cx, cy - 2, 9, 0, Math.PI * 2); ctx.fill();
+  function drawWheel(x, y) {                   // charcoal tyre, light hub
+    ctx.fillStyle = WHEEL_DARK;
+    roundRect(x, y, 9, 22, 4); ctx.fill();
+    ctx.fillStyle = WHEEL_HUB;
+    roundRect(x + 2.5, y + 8, 4, 6, 2); ctx.fill();
   }
 
-  function drawTukTuk(cx, cy) {                // GrabTukTuk: three wheels and a canopy
-    ctx.fillStyle = '#111116';                 // rear wheels + front wheel
+  function drawWindow(x, y, w, h, r, alpha) {  // green glass with a Grab-green edge
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.fillStyle = WIN_FILL;
+    roundRect(x, y, w, h, r); ctx.fill();
+    ctx.strokeStyle = WIN_EDGE; ctx.lineWidth = 2;
+    roundRect(x, y, w, h, r); ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawSparkle(cx, cy, r) {            // Plus: four-point gold star
+    ctx.fillStyle = GOLD;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r);
+    ctx.quadraticCurveTo(cx + r * 0.25, cy - r * 0.25, cx + r, cy);
+    ctx.quadraticCurveTo(cx + r * 0.25, cy + r * 0.25, cx, cy + r);
+    ctx.quadraticCurveTo(cx - r * 0.25, cy + r * 0.25, cx - r, cy);
+    ctx.quadraticCurveTo(cx - r * 0.25, cy - r * 0.25, cx, cy - r);
+    ctx.closePath(); ctx.fill();
+  }
+
+  function drawBike(cx, cy) {                  // GrabBike: white scooter, green accents
+    ctx.fillStyle = WHEEL_DARK;                // wheels
+    ctx.beginPath(); ctx.arc(cx, cy - 30, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy + 30, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = WHEEL_HUB;                 // hubs
+    ctx.beginPath(); ctx.arc(cx, cy - 30, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy + 30, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = BODY_WHITE;                // white deck
+    roundRect(cx - 8, cy - 22, 16, 44, 7); ctx.fill();
+    ctx.fillStyle = GRAB_GREEN;                // green front accent
+    roundRect(cx - 8, cy - 22, 16, 9, 4); ctx.fill();
+    ctx.strokeStyle = WHEEL_DARK;              // handlebar
+    ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx - 16, cy - 16); ctx.lineTo(cx + 16, cy - 16); ctx.stroke();
+    ctx.lineCap = 'butt';
+    ctx.fillStyle = GRAB_GREEN;                // green seat under the rider
+    ctx.beginPath(); ctx.ellipse(cx, cy + 10, 13, 16, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = BODY_WHITE;                // rider helmet, Grab white
+    ctx.beginPath(); ctx.arc(cx, cy + 4, 9, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = GRAB_GREEN; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy + 4, 9, 0, Math.PI * 2); ctx.stroke();
+  }
+
+  function drawTukTuk(cx, cy) {                // GrabTukTuk: white body, green canopy, three wheels
+    ctx.fillStyle = WHEEL_DARK;                // rear wheels + front wheel
     roundRect(cx - 28, cy + 12, 9, 20, 4); ctx.fill();
     roundRect(cx + 19, cy + 12, 9, 20, 4); ctx.fill();
     roundRect(cx - 4, cy - 40, 8, 16, 4); ctx.fill();
-    ctx.fillStyle = TIER_COLORS[1];            // body, narrower at the nose
+    ctx.fillStyle = BODY_WHITE;                // white body, narrower at the nose
     ctx.beginPath();
     ctx.moveTo(cx - 10, cy - 38);
     ctx.quadraticCurveTo(cx - 24, cy - 20, cx - 24, cy + 4);
@@ -297,45 +338,44 @@ export function startGame(canvas, hud, questions, onFinish) {
     ctx.lineTo(cx + 24, cy + 4);
     ctx.quadraticCurveTo(cx + 24, cy - 20, cx + 10, cy - 38);
     ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#15151a';                 // canopy over the cab
+    ctx.fillStyle = GRAB_GREEN;                // green canopy over the cab
     roundRect(cx - 20, cy - 8, 40, 34, 8); ctx.fill();
-    ctx.fillStyle = 'rgba(165, 220, 255, 0.9)';// windscreen
-    roundRect(cx - 12, cy - 26, 24, 12, 4); ctx.fill();
+    ctx.fillStyle = '#1B1F22';                 // open dark cabin under the canopy
+    roundRect(cx - 14, cy - 2, 28, 22, 6); ctx.fill();
+    drawWindow(cx - 12, cy - 26, 24, 12, 4, 1);// windscreen
     ctx.fillStyle = '#fff9d9';                 // single headlamp
     ctx.beginPath(); ctx.arc(cx, cy - 36, 4, 0, Math.PI * 2); ctx.fill();
   }
 
   function drawCarBody(cx, cy) {
     const v = CAR_STYLE[tier];
+    const halfW = v.van ? 29 : 26;             // vans sit wider and boxier
     const top = cy - 44 - v.stretch, h = 88 + v.stretch * 2;
-    ctx.fillStyle = '#111116';                 // wheels
-    roundRect(cx - 31, top + 12, 9, 22, 4); ctx.fill();
-    roundRect(cx + 22, top + 12, 9, 22, 4); ctx.fill();
-    roundRect(cx - 31, top + h - 34, 9, 22, 4); ctx.fill();
-    roundRect(cx + 22, top + h - 34, 9, 22, 4); ctx.fill();
-    if (v.spoiler) {
-      ctx.fillStyle = '#0c0c10';
-      roundRect(cx - 22, top + h - 6, 44, 8, 3); ctx.fill();
+    const corner = v.van ? 9 : 14;
+    drawWheel(cx - halfW - 5, top + 12);
+    drawWheel(cx + halfW - 4, top + 12);
+    drawWheel(cx - halfW - 5, top + h - 34);
+    drawWheel(cx + halfW - 4, top + h - 34);
+    ctx.fillStyle = v.body;                    // body
+    roundRect(cx - halfW, top, halfW * 2, h, corner); ctx.fill();
+    ctx.strokeStyle = v.trim || 'rgba(0, 0, 0, 0.22)';  // Exec gold, others a soft edge
+    ctx.lineWidth = v.trim ? 3 : 1.5;
+    roundRect(cx - halfW, top, halfW * 2, h, corner); ctx.stroke();
+    if (v.van) {                               // MPV: windscreen + three side-window rows
+      drawWindow(cx - 18, top + 10, 36, 16, 5, v.winAlpha);
+      for (let i = 0; i < 3; i++) {
+        const wy = top + 34 + i * ((h - 56) / 3);
+        drawWindow(cx - halfW + 5, wy, 8, 15, 3, v.winAlpha);
+        drawWindow(cx + halfW - 13, wy, 8, 15, 3, v.winAlpha);
+      }
+    } else {                                   // sedan: windscreen + rear window
+      drawWindow(cx - 18, top + 12, 36, 20, 6, v.winAlpha);
+      drawWindow(cx - 16, top + h - 24, 32, 14, 5, v.winAlpha);
     }
-    ctx.fillStyle = TIER_COLORS[tier];         // body
-    roundRect(cx - 26, top, 52, h, 14); ctx.fill();
-    if (tier === S.TIERS.length - 1) {         // Exec gets the gold trim
-      ctx.strokeStyle = '#e8c35a'; ctx.lineWidth = 3;
-      roundRect(cx - 26, top, 52, h, 14); ctx.stroke();
-    }
-    if (v.stripe) {
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
-      ctx.fillRect(cx - 2, top + 4, 4, h - 8);
-    }
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';   // sheen
-    roundRect(cx - 20, top + 4, 18, h - 8, 9); ctx.fill();
-    ctx.fillStyle = 'rgba(165, 220, 255, 0.9)';    // windscreen
-    roundRect(cx - 18, top + 12, 36, 20, 6); ctx.fill();
-    ctx.fillStyle = 'rgba(165, 220, 255, 0.55)';   // rear window
-    roundRect(cx - 16, top + h - 24, 32, 14, 5); ctx.fill();
-    ctx.fillStyle = '#fff9d9';                     // headlamps
+    ctx.fillStyle = '#fff9d9';                 // headlamps
     roundRect(cx - 20, top + 2, 10, 5, 2); ctx.fill();
     roundRect(cx + 10, top + 2, 10, 5, 2); ctx.fill();
+    if (v.sparkle) drawSparkle(cx, top + 7, 6);// Plus: gold sparkle on the bonnet
   }
 
   function draw() {
@@ -375,7 +415,7 @@ export function startGame(canvas, hud, questions, onFinish) {
 
     for (const c of coins) drawCoin(laneCenter(c.lane), c.y);
     for (const o of obstacles) drawCone(laneCenter(o.lane), o.y);
-    if (vip) drawVip(laneCenter(vip.lane), vip.y);
+    if (quizCoin) drawQuizCoin(laneCenter(quizCoin.lane), quizCoin.y);
     drawVehicle(laneCenter(carLane), carY());
 
     for (const p of popups) {                  // score popups float up and fade
