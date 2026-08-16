@@ -1,16 +1,45 @@
-import { GAME_NAME, MATCH_BONUS, HEAT_DURATION_MS } from './config.js';
+import { MATCH_BONUS } from './config.js';
 import * as db from './db.js';
-import { buildLeaderboard, computePairs, connectionStats } from './pairing.js';
+import { buildLeaderboard, connectionStats } from './pairing.js';
+import { computePhase } from './phase.js';
 
 const $ = id => document.getElementById(id);
+const ADMIN_TITLE = 'PM Connect - GrabRush!';
+const ADMIN_PASS = 'grabrocket';        // client-side deterrent only - this file is public
+const UNLOCK_KEY = 'grabrush_admin_ok';
+
 let players = [];
-let timerRunning = false;
+let ticker = null;
 
 init();
 
-async function init() {
-  document.title = GAME_NAME + ' - Control Room';
-  $('admin-title').textContent = GAME_NAME + ' - Control Room';
+// The gate. Client-side only by design (accepted trade-off): it keeps a
+// curious player who scans the QR and edits the URL out of the control
+// room, nothing more. sessionStorage survives a refresh, not a new tab.
+function init() {
+  document.title = ADMIN_TITLE;
+  $('admin-title').textContent = ADMIN_TITLE;
+  if (sessionStorage.getItem(UNLOCK_KEY) === '1') { boot(); return; }
+  showView('gate');
+  const tryUnlock = () => {
+    if ($('admin-pass').value === ADMIN_PASS) {
+      sessionStorage.setItem(UNLOCK_KEY, '1');
+      $('gate-error').textContent = '';
+      boot();
+    } else {
+      $('gate-error').textContent = 'Wrong password.';
+    }
+  };
+  $('gate-btn').addEventListener('click', tryUnlock);
+  $('admin-pass').addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+}
+
+async function boot() {
+  showView('setup');
+  $('bonus-rule').textContent =
+    'Find someone from a different Tech Family who travels to the office a different way. '
+    + 'Swap Slack IDs - you both type them in. +' + MATCH_BONUS + ' each. '
+    + 'You can also find people on Slack.';
 
   const playerUrl = location.href.replace(/admin\.html.*$/, '');
   try { new QRCode($('qr'), { text: playerUrl, width: 300, height: 300 }); }
@@ -27,20 +56,55 @@ async function init() {
   db.onGameState(s => {
     if (!s) return;
     if (s.session !== session) { location.reload(); return; }  // reset from another tab
-    setPhase(s.status);
+    applyState(s);
   });
-  if (state) setPhase(state.status);
+  if (state) applyState(state);
 
   $('start-heat').addEventListener('click', startHeat);
-  $('start-match').addEventListener('click', startMatchRound);
   for (const b of document.querySelectorAll('.new-game')) b.addEventListener('click', newGame);
 }
 
-function setPhase(status) {
-  $('view-setup').classList.toggle('active', status === 'waiting');
-  $('view-heat').classList.toggle('active', status === 'started');
-  $('view-match').classList.toggle('active', status === 'match_round');
-  if (status === 'started') runTimer();
+// One button starts the game; from there the shared clock drives the big
+// screen through heat, bonus round, and final results on its own.
+function applyState(state) {
+  if (state.status !== 'started') { stopTicker(); showView('setup'); return; }
+  ensureTicker(state.started_at);
+}
+
+function showView(name) {
+  for (const v of ['gate', 'setup', 'heat', 'match']) {
+    $('view-' + v).classList.toggle('active', v === name);
+  }
+}
+
+function stopTicker() {
+  if (ticker) { clearInterval(ticker); ticker = null; }
+}
+
+// Anchored to started_at, not page load - refreshing the admin mid-game
+// resumes at the right point in the timeline.
+function ensureTicker(startedAt) {
+  if (ticker) return;
+  const tick = () => {
+    const p = computePhase(startedAt, Date.now());
+    if (!p || p.phase === 'heat') {
+      showView('heat');
+      $('heat-timer').textContent = p ? Math.ceil(p.heatRemainingMs / 1000) : '';
+    } else if (p.phase === 'bonus') {
+      showView('match');
+      $('match-title').textContent = 'Bonus round';
+      $('bonus-timer').textContent = Math.ceil(p.bonusRemainingMs / 1000) + 's';
+      $('bonus-rule').style.display = '';
+    } else {
+      showView('match');
+      $('match-title').textContent = 'Final results';
+      $('bonus-timer').textContent = '';
+      $('bonus-rule').style.display = 'none';
+      stopTicker();          // the board keeps refreshing via onPlayers
+    }
+  };
+  tick();
+  ticker = setInterval(tick, 250);
 }
 
 async function startHeat() {
@@ -57,30 +121,6 @@ async function newGame() {
   catch (err) { alert(err.message); }
 }
 
-function runTimer() {
-  if (timerRunning) return;
-  timerRunning = true;
-  const total = HEAT_DURATION_MS / 1000 + 3; // 3s countdown + heat
-  const t0 = Date.now();
-  const iv = setInterval(() => {
-    const left = Math.max(0, Math.ceil(total - (Date.now() - t0) / 1000));
-    $('heat-timer').textContent = left;
-    if (left === 0) clearInterval(iv);
-  }, 250);
-}
-
-async function startMatchRound() {
-  const played = players.filter(p => p.score !== null && p.score !== undefined);
-  if (!confirm('Assign matches for ' + played.length + ' players on the board?')) return;
-  try {
-    const pairs = computePairs(played);
-    await db.assignMatches(pairs, played);
-    await db.setGameStatus('match_round');
-  } catch (err) {
-    alert('Match assignment failed: ' + err.message);
-  }
-}
-
 function render() {
   $('join-count').textContent = players.length;
   $('join-list').innerHTML = players.map(p =>
@@ -92,7 +132,7 @@ function render() {
     '<tr class="' + (r.connected ? 'connected' : '') + '">' +
     '<td>' + (i + 1) + '</td><td>@' + esc(r.slack_id) + '</td>' +
     '<td>' + esc(r.tech_family) + '</td>' +
-    '<td>' + r.display_score + (r.connected ? ' 🤝' : '') + '</td></tr>').join('');
+    '<td>' + r.display_score + (r.connected ? ' \u{1F91D}' : '') + '</td></tr>').join('');
   $('board-heat').innerHTML = html;
   $('board-match').innerHTML = html;
   $('finished-count').textContent = rows.length;

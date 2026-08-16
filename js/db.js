@@ -68,19 +68,6 @@ export async function submitScore(playerId, score) {
   return false;
 }
 
-export async function assignMatches(pairs, allPlayers) {
-  const bySlack = new Map(allPlayers.map(p => [p.slack_id, p]));
-  const results = await Promise.all(pairs.flatMap(([a, b]) => [
-    client.from('players').update({ match_slack_id: b }).eq('id', bySlack.get(a).id),
-    client.from('players').update({ match_slack_id: a }).eq('id', bySlack.get(b).id),
-  ]));
-  const failed = results.filter(r => r.error);
-  if (failed.length) {
-    throw new Error(failed.length + ' of ' + results.length
-      + ' match writes failed - press the button again.');
-  }
-}
-
 export async function claimMatch(playerId, claimedSlackId) {
   const claimed = normaliseSlackId(claimedSlackId);
   if (!claimed) throw new Error('Type their Slack ID first.');
@@ -110,18 +97,5 @@ export function onPlayers(session, cb) {
     .subscribe();
   const poll = setInterval(push, 5000);
   push();
-  return () => { client.removeChannel(ch); clearInterval(poll); };
-}
-
-export function onOwnRow(playerId, cb) {
-  const ch = client.channel('own-' + playerId)
-    .on('postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'players',
-          filter: 'id=eq.' + playerId },
-        payload => cb(payload.new))
-    .subscribe();
-  const poll = setInterval(async () => {
-    try { cb(await getPlayer(playerId)); } catch { /* keep polling */ }
-  }, 4000);
   return () => { client.removeChannel(ch); clearInterval(poll); };
 }

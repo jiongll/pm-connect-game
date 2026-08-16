@@ -3,16 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Grab Rush - Control Room</title>
+<title>PM Connect - GrabRush!</title>
 <link rel="stylesheet" href="css/style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3"></script>
 <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@04f46c6a0708418cb7b96fc563eacae0fbf77674/qrcode.min.js"></script>
 </head>
 <body class="admin">
 
-<div id="view-setup" class="admin-view active">
+<div id="view-gate" class="admin-view active">
+  <div id="gate-box">
+    <h1>PM Connect - GrabRush!</h1>
+    <label>Admin password
+      <input id="admin-pass" type="password" autocomplete="off">
+    </label>
+    <button id="gate-btn" class="admin-btn">Enter</button>
+    <p id="gate-error"></p>
+  </div>
+</div>
+
+<div id="view-setup" class="admin-view">
   <div class="admin-head">
-    <h1 id="admin-title">Grab Rush - Control Room</h1>
+    <h1 id="admin-title">PM Connect - GrabRush!</h1>
     <button class="admin-btn ghost new-game">Start new game</button>
   </div>
   <p id="admin-error" class="error"></p>
@@ -37,15 +48,16 @@
     <button class="admin-btn ghost new-game">Start new game</button>
   </div>
   <table class="board"><tbody id="board-heat"></tbody></table>
-  <button id="start-match" class="admin-btn" style="margin-top:1.4rem">Start the match round</button>
 </div>
 
 <div id="view-match" class="admin-view">
   <div class="admin-head">
-    <h1>Match round</h1>
+    <h1 id="match-title">Bonus round</h1>
+    <span id="bonus-timer"></span>
     <span id="connected-count">0 of 0 connected</span>
     <button class="admin-btn ghost new-game">Start new game</button>
   </div>
+  <p id="bonus-rule"></p>
   <table class="board"><tbody id="board-match"></tbody></table>
 </div>
 
