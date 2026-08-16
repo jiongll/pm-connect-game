@@ -10,7 +10,7 @@ import { MATCH_BONUS } from './config.js';
 function rulesOk(a, b) {
   return a.slack_id !== b.slack_id          // not yourself
     && a.tech_family !== b.tech_family      // different Tech Family
-    && a.bucket === b.bucket;               // travels the same way
+    && a.bucket !== b.bucket;               // travels a different way
 }
 
 // Player-facing verdict for a claim BEFORE it is written. `other` is the
@@ -26,8 +26,8 @@ export function validatePartner(me, other, allPlayers = []) {
   if (other.tech_family === me.tech_family) {
     return { ok: false, reason: 'Same Tech Family - find someone from a different one.' };
   }
-  if (other.bucket !== me.bucket) {
-    return { ok: false, reason: "They don't travel the same way as you - find someone who does." };
+  if (other.bucket === me.bucket) {
+    return { ok: false, reason: "They travel the same way as you - find someone who doesn't." };
   }
   if (bonusAwarded(other, allPlayers) && other.claimed_match !== me.slack_id) {
     return { ok: false, reason: "They're already paired with someone else." };
