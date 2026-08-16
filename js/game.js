@@ -1,9 +1,20 @@
-import { HEAT_DURATION_MS, TIER_BONUS, BASE_SPEED, COIN_EVERY, OBSTACLE_EVERY,
+import { HEAT_DURATION_MS, TIER_BONUS, COIN_POINTS, COLLISION_PENALTY,
+         BASE_SPEED, COIN_EVERY, OBSTACLE_EVERY,
          BOOST_MULTIPLIER, BOOST_SECONDS, QUIZ_COUNT, QUIZ_SECONDS,
          QUIZ_FIRST_AT, QUIZ_LAST_AT } from './config.js';
 import * as S from './scoring.js';
 
-const TIER_COLORS = ['#00b14f', '#17b5a6', '#3d3f66', '#15151a'];
+const TIER_COLORS = ['#2ec46a', '#ffb54d', '#00b14f', '#17b5a6', '#3d3f66', '#15151a'];
+const POPUP_LIFE = 0.9;                          // seconds a score popup lives
+
+// Car liveries, Standard to Exec: longer and fancier each step up.
+// Indices 0-1 (bike, tuk-tuk) have their own drawing functions.
+const CAR_STYLE = [null, null,
+  { stretch: 0, stripe: false, spoiler: false },   // Standard
+  { stretch: 0, stripe: true,  spoiler: false },   // Plus
+  { stretch: 4, stripe: true,  spoiler: true  },   // Premium
+  { stretch: 8, stripe: true,  spoiler: true  },   // Exec
+];
 
 export function startGame(canvas, hud, questions, onFinish) {
   const ctx = canvas.getContext('2d');
@@ -33,9 +44,9 @@ export function startGame(canvas, hud, questions, onFinish) {
       : QUIZ_FIRST_AT + i * (QUIZ_LAST_AT - QUIZ_FIRST_AT) / (QUIZ_COUNT - 1));
   }
 
-  let elapsed = 0, last = null, raf = null, finished = false;
+  let elapsed = 0, wall = 0, last = null, raf = null, finished = false;
   let carLane = 1, tier = 0, score = 0;
-  let coins = [], obstacles = [], vip = null, quiz = null;
+  let coins = [], obstacles = [], vip = null, quiz = null, popups = [];
   let dashOffset = 0, coinTimer = 0.4, obstacleTimer = 1.2;
   let nextQuiz = 0, qIndex = 0;
   let boostUntil = -1, invulnUntil = -1, feedback = null;
@@ -61,6 +72,10 @@ export function startGame(canvas, hud, questions, onFinish) {
     let s = BASE_SPEED * S.tierSpeedMultiplier(tier);
     if (elapsed < boostUntil) s *= BOOST_MULTIPLIER;   // correct-answer boost
     return s;
+  }
+
+  function popScore(text, x, y, good) {          // floating +N / -N at the action
+    popups.push({ text, x, y, born: elapsed, good });
   }
 
   function openQuiz(q) {
@@ -112,6 +127,7 @@ export function startGame(canvas, hud, questions, onFinish) {
     const atMax = tier === S.TIERS.length - 1;   // already Exec
     tier = S.answerQuestion(tier, correct);
     if (correct && atMax) score += TIER_BONUS;   // Exec: quizzes stay worth taking
+    if (correct) popScore('+' + TIER_BONUS, laneCenter(carLane), carY() - 70, true);
     if (correct) boostUntil = elapsed + BOOST_SECONDS;
     feedback = correct
       ? { text: atMax ? 'Exec bonus +' + TIER_BONUS + '!'
@@ -138,7 +154,7 @@ export function startGame(canvas, hud, questions, onFinish) {
       obstacles.push({ lane: Math.floor(Math.random() * 3), y: -40 });
       obstacleTimer = OBSTACLE_EVERY;
     }
-    if (!vip && nextQuiz < quizTimes.length && elapsed >= quizTimes[nextQuiz]) {
+    if (!vip && nextQuiz < quizTimes.length && wall >= quizTimes[nextQuiz]) {
       vip = { lane: Math.floor(Math.random() * 3), y: -40 };
       nextQuiz++;
     }
@@ -151,7 +167,11 @@ export function startGame(canvas, hud, questions, onFinish) {
       const near = Math.abs(c.y - carY()) < 46;
       const laneOk = c.lane === carLane
         || (S.tierHasMagnet(tier) && Math.abs(c.lane - carLane) === 1);
-      if (near && laneOk) { score = S.collectCoin(score); return false; }
+      if (near && laneOk) {
+        score = S.collectCoin(score);
+        popScore('+' + COIN_POINTS, laneCenter(c.lane), c.y, true);
+        return false;
+      }
       return c.y < H + 60;
     });
 
@@ -160,7 +180,7 @@ export function startGame(canvas, hud, questions, onFinish) {
           && elapsed > invulnUntil) {
         score = S.hitObstacle(score);
         invulnUntil = elapsed + 1.2;
-        feedback = { text: 'Ouch!', until: elapsed + 0.8, good: false };
+        popScore('-' + COLLISION_PENALTY, laneCenter(o.lane), o.y, false);
         return false;
       }
       return o.y < H + 60;
@@ -177,9 +197,9 @@ export function startGame(canvas, hud, questions, onFinish) {
       }
     }
 
+    popups = popups.filter(p => elapsed - p.born < POPUP_LIFE);
     hud.score.textContent = score;
     hud.tier.textContent = S.TIERS[tier];
-    hud.time.textContent = Math.max(0, Math.ceil(HEAT_DURATION_MS / 1000 - elapsed));
   }
 
   function roundRect(x, y, w, h, r) {
@@ -236,32 +256,86 @@ export function startGame(canvas, hud, questions, onFinish) {
     ctx.fillText('VIP', x, y + 6);
   }
 
-  function drawCar(cx, cy) {                   // the car, tier-coloured
+  function drawVehicle(cx, cy) {               // the player, one drawing per tier
     const flash = elapsed < invulnUntil && Math.floor(elapsed * 10) % 2 === 0;
     ctx.globalAlpha = flash ? 0.4 : 1;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';      // shared ground shadow
     ctx.beginPath(); ctx.ellipse(cx, cy + 42, 30, 8, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#111116';
-    roundRect(cx - 31, cy - 32, 9, 22, 4); ctx.fill();
-    roundRect(cx + 22, cy - 32, 9, 22, 4); ctx.fill();
-    roundRect(cx - 31, cy + 10, 9, 22, 4); ctx.fill();
-    roundRect(cx + 22, cy + 10, 9, 22, 4); ctx.fill();
-    ctx.fillStyle = TIER_COLORS[tier];
-    roundRect(cx - 26, cy - 44, 52, 88, 14); ctx.fill();
-    if (tier === 3) {                          // Exec gets the gold trim
-      ctx.strokeStyle = '#e8c35a'; ctx.lineWidth = 3;
-      roundRect(cx - 26, cy - 44, 52, 88, 14); ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';
-    roundRect(cx - 20, cy - 40, 18, 80, 9); ctx.fill();
-    ctx.fillStyle = 'rgba(165, 220, 255, 0.9)';
-    roundRect(cx - 18, cy - 32, 36, 20, 6); ctx.fill();
-    ctx.fillStyle = 'rgba(165, 220, 255, 0.55)';
-    roundRect(cx - 16, cy + 20, 32, 14, 5); ctx.fill();
-    ctx.fillStyle = '#fff9d9';
-    roundRect(cx - 20, cy - 42, 10, 5, 2); ctx.fill();
-    roundRect(cx + 10, cy - 42, 10, 5, 2); ctx.fill();
+    if (tier === 0) drawBike(cx, cy);
+    else if (tier === 1) drawTukTuk(cx, cy);
+    else drawCarBody(cx, cy);
     ctx.globalAlpha = 1;
+  }
+
+  function drawBike(cx, cy) {                  // GrabBike: two wheels and a rider
+    ctx.fillStyle = '#111116';                 // wheels
+    ctx.beginPath(); ctx.arc(cx, cy - 30, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy + 30, 11, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = TIER_COLORS[0];          // frame
+    ctx.lineWidth = 7; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx, cy - 26); ctx.lineTo(cx, cy + 26); ctx.stroke();
+    ctx.strokeStyle = '#15151a';               // handlebar
+    ctx.lineWidth = 5;
+    ctx.beginPath(); ctx.moveTo(cx - 16, cy - 18); ctx.lineTo(cx + 16, cy - 18); ctx.stroke();
+    ctx.lineCap = 'butt';
+    ctx.fillStyle = TIER_COLORS[0];            // rider: shoulders + helmet
+    ctx.beginPath(); ctx.ellipse(cx, cy + 8, 14, 18, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#d9fcde';
+    ctx.beginPath(); ctx.arc(cx, cy - 2, 9, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawTukTuk(cx, cy) {                // GrabTukTuk: three wheels and a canopy
+    ctx.fillStyle = '#111116';                 // rear wheels + front wheel
+    roundRect(cx - 28, cy + 12, 9, 20, 4); ctx.fill();
+    roundRect(cx + 19, cy + 12, 9, 20, 4); ctx.fill();
+    roundRect(cx - 4, cy - 40, 8, 16, 4); ctx.fill();
+    ctx.fillStyle = TIER_COLORS[1];            // body, narrower at the nose
+    ctx.beginPath();
+    ctx.moveTo(cx - 10, cy - 38);
+    ctx.quadraticCurveTo(cx - 24, cy - 20, cx - 24, cy + 4);
+    ctx.lineTo(cx - 24, cy + 30); ctx.lineTo(cx + 24, cy + 30);
+    ctx.lineTo(cx + 24, cy + 4);
+    ctx.quadraticCurveTo(cx + 24, cy - 20, cx + 10, cy - 38);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#15151a';                 // canopy over the cab
+    roundRect(cx - 20, cy - 8, 40, 34, 8); ctx.fill();
+    ctx.fillStyle = 'rgba(165, 220, 255, 0.9)';// windscreen
+    roundRect(cx - 12, cy - 26, 24, 12, 4); ctx.fill();
+    ctx.fillStyle = '#fff9d9';                 // single headlamp
+    ctx.beginPath(); ctx.arc(cx, cy - 36, 4, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawCarBody(cx, cy) {
+    const v = CAR_STYLE[tier];
+    const top = cy - 44 - v.stretch, h = 88 + v.stretch * 2;
+    ctx.fillStyle = '#111116';                 // wheels
+    roundRect(cx - 31, top + 12, 9, 22, 4); ctx.fill();
+    roundRect(cx + 22, top + 12, 9, 22, 4); ctx.fill();
+    roundRect(cx - 31, top + h - 34, 9, 22, 4); ctx.fill();
+    roundRect(cx + 22, top + h - 34, 9, 22, 4); ctx.fill();
+    if (v.spoiler) {
+      ctx.fillStyle = '#0c0c10';
+      roundRect(cx - 22, top + h - 6, 44, 8, 3); ctx.fill();
+    }
+    ctx.fillStyle = TIER_COLORS[tier];         // body
+    roundRect(cx - 26, top, 52, h, 14); ctx.fill();
+    if (tier === S.TIERS.length - 1) {         // Exec gets the gold trim
+      ctx.strokeStyle = '#e8c35a'; ctx.lineWidth = 3;
+      roundRect(cx - 26, top, 52, h, 14); ctx.stroke();
+    }
+    if (v.stripe) {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.fillRect(cx - 2, top + 4, 4, h - 8);
+    }
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.14)';   // sheen
+    roundRect(cx - 20, top + 4, 18, h - 8, 9); ctx.fill();
+    ctx.fillStyle = 'rgba(165, 220, 255, 0.9)';    // windscreen
+    roundRect(cx - 18, top + 12, 36, 20, 6); ctx.fill();
+    ctx.fillStyle = 'rgba(165, 220, 255, 0.55)';   // rear window
+    roundRect(cx - 16, top + h - 24, 32, 14, 5); ctx.fill();
+    ctx.fillStyle = '#fff9d9';                     // headlamps
+    roundRect(cx - 20, top + 2, 10, 5, 2); ctx.fill();
+    roundRect(cx + 10, top + 2, 10, 5, 2); ctx.fill();
   }
 
   function draw() {
@@ -302,7 +376,19 @@ export function startGame(canvas, hud, questions, onFinish) {
     for (const c of coins) drawCoin(laneCenter(c.lane), c.y);
     for (const o of obstacles) drawCone(laneCenter(o.lane), o.y);
     if (vip) drawVip(laneCenter(vip.lane), vip.y);
-    drawCar(laneCenter(carLane), carY());
+    drawVehicle(laneCenter(carLane), carY());
+
+    for (const p of popups) {                  // score popups float up and fade
+      const age = elapsed - p.born;
+      ctx.globalAlpha = Math.max(0, 1 - age / POPUP_LIFE);
+      ctx.font = 'bold 26px system-ui';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(4, 14, 9, 0.85)';
+      ctx.strokeText(p.text, p.x, p.y - age * 70);
+      ctx.fillStyle = p.good ? '#ffd76a' : '#ff8f81';
+      ctx.fillText(p.text, p.x, p.y - age * 70);
+      ctx.globalAlpha = 1;
+    }
 
     if (feedback && elapsed < feedback.until) {
       ctx.font = 'bold 22px system-ui';
@@ -319,6 +405,8 @@ export function startGame(canvas, hud, questions, onFinish) {
     finished = true;
     cancelAnimationFrame(raf);
     if (quiz) { clearInterval(quiz.interval); clearTimeout(quiz.timeout); }
+    hud.banner.classList.remove('visible');    // a quiz may be open at the buzzer
+    quiz = null;                               // unanswered = no gain, no penalty
     canvas.removeEventListener('pointerdown', onPointer);
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', resize);
@@ -329,11 +417,13 @@ export function startGame(canvas, hud, questions, onFinish) {
     if (last === null) last = ts;
     const dt = Math.min((ts - last) / 1000, 0.05);  // clamp background-tab jumps
     last = ts;
-    if (!quiz) {                               // world and heat clock freeze mid-quiz
+    wall += dt;                                // the 90 s heat clock never pauses
+    if (!quiz) {                               // the world still freezes mid-quiz
       update(dt);
       draw();
     }
-    if (elapsed * 1000 >= HEAT_DURATION_MS) { end(); return; }
+    hud.time.textContent = Math.max(0, Math.ceil(HEAT_DURATION_MS / 1000 - wall));
+    if (wall * 1000 >= HEAT_DURATION_MS) { end(); return; }
     raf = requestAnimationFrame(frame);
   }
 
