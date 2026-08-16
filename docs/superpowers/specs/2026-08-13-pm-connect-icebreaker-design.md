@@ -234,3 +234,31 @@ From the owner's second playtest. Six changes, plus the real Tech Family list.
 Tech Families (confirmed): ACE, BTP, COREX, Data Product, Ecomm, Geo & IoT, PSPO, FS, Integrity, Mobility, FF, SPA, GFB, Other.
 
 Also fixed en route: the admin heat timer used to anchor to page load, so a mid-heat refresh restarted the 93 s display; it now anchors to `started_at` like everything else.
+
+---
+
+## Round 3 (2026-08-16)
+
+From the owner's third playtest. Seven changes, implemented as Tasks 4-8 of the round-2/3 plan (`docs/superpowers/plans/2026-08-16-playtest-round2.md`). Zero database schema changes throughout.
+
+1. **Pairing rule flips: different Tech Family AND different commute bucket.** Round 2 paired same-bucket; the owner flipped it so the opener is a difference, not a coincidence. The rejection copy follows (`They travel the same way as you - find someone who doesn't.`), and both the phone instruction and the projector rule line carry a Slack hint (you can also find someone on Slack) so remote attendees stay first-class.
+2. **Admin password gate.** `admin.html` asks for a password (`grabrocket`) before showing the control room; success sets `sessionStorage['grabrush_admin_ok']` so a refresh does not re-ask. Checked client-side only - the string is readable in the public page source, so this is a deterrent against curious players who scan the QR and edit the URL, not security. Accepted: the page can at worst start or reset a 10-minute game.
+3. **Admin retitle.** Browser title and on-page h1 become exactly `PM Connect - GrabRush!`. The player-facing `GAME_NAME` stays `Grab Rush`.
+4. **Seven-tier vehicle ladder.** GrabBike, GrabTukTuk, Standard, Plus, 6 Seater, Premium, Exec - `6 Seater` slots in at index 4. One step per correct quiz answer, so Exec now takes six. The coin-magnet perk still arrives at Standard.
+5. **Grab design language, still canvas-only.** Vehicles become flat 2D side-view shapes styled like the real Grab app fleet icons: white/off-white bodies, green-tinted windows, charcoal wheels; Plus wears a small gold sparkle badge, Premium goes dark charcoal, Exec is a black MPV with a gold trim line. Coins get the ringed gold look with a bold `G`. Collision boxes, lanes and spawns unchanged - this is paint, not physics. Still zero proprietary asset files.
+6. **The VIP pickup becomes the mystery `?` coin.** Roughly twice a normal coin's radius, bold `?` glyph, and the in-game banner reads `Bonus question!`. No user-facing `VIP` text remains anywhere.
+7. **Sound, synthesised.** New `js/sound.js`: one lazy `AudioContext` unlocked by the first user gesture (browser autoplay policy - phones stay silent until the player touches something), pure Web Audio synthesis, zero audio files. Every cue routes through a single master gain (0.13) so nothing startles a conference-room PA.
+
+### Delight pass (2026-08-17)
+
+A structured 50-item review of the entire surface (`.superpowers/sdd/game-design-review.md`, R1-R50) followed the round-3 build, covering the phone (waiting room, drive feel, bonus staging) and the projector (start mirror, live billboards, the finale). **47 of 50 adopted**, landing as Task 9 (phone) and Task 10 (projector) in the same plan. Highlights: a steerable warm-up bike and rotating tips in the waiting room, the projector mirroring the phones' 3-2-1-GO full-screen, live billboards replacing the wall of alphabetical zeros during play, a pair ticker with a soft ding as each connection lands, and a facilitator-paced podium reveal - 3rd, 2nd, 1st on successive presses, then the full board with medals and three warm award lines. The projector's native browser dialogs are replaced by an in-page modal.
+
+R2 rides along as a fairness fix rather than delight: both entry dropdowns now open on a disabled placeholder and the join button validates them, because a silently defaulted Tech Family or commute would break partner validation in the bonus round and the player would never know why.
+
+Excluded, by owner decision:
+
+- **R16 cone tumble** (hit cones fly off spinning instead of vanishing) - polish inside the collision path days before the event; the review's own risk note over the payoff.
+- **R17 near-miss whoosh** (a soft sound plus a "Close!" popup for adjacent-lane passes) - free drama, but easy to over-fire in a 90-second heat; cut rather than tuned.
+- **R39 join milestone banners** - the pulsing join counter already gives the room a heartbeat; banners on top add noise, not signal.
+
+Reversibility: the round-2 game stays pinned as branch `safety/round2-done` (`c2fa44b`); round 3 lands as per-task commits on `main`; the live GitHub Pages site changes only at one final push, made after a whole-branch review. Rolling back the event site is a single push.
