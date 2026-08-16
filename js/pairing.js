@@ -1,41 +1,46 @@
 import { MATCH_BONUS } from './config.js';
 
-// Reciprocal 1-to-1 pairs: same bucket, different tech family.
-// Heuristic: within each bucket, repeatedly pair one player from each of the
-// two largest remaining tech-family groups. For "must differ" pairing this
-// maximises the number of pairs. Leftovers stay unmatched (fine per spec).
-export function computePairs(players) {
-  players = [...players].sort((a, b) => a.slack_id.localeCompare(b.slack_id));
-  const byBucket = new Map();
-  for (const p of players) {
-    if (!byBucket.has(p.bucket)) byBucket.set(p.bucket, []);
-    byBucket.get(p.bucket).push(p);
-  }
-  const pairs = [];
-  for (const group of byBucket.values()) {
-    const byTf = new Map();
-    for (const p of group) {
-      if (!byTf.has(p.tech_family)) byTf.set(p.tech_family, []);
-      byTf.get(p.tech_family).push(p);
-    }
-    while (true) {
-      const tfGroups = [...byTf.values()]
-        .filter(g => g.length > 0)
-        .sort((x, y) => y.length - x.length);
-      if (tfGroups.length < 2) break;
-      pairs.push([tfGroups[0].pop().slack_id, tfGroups[1].pop().slack_id]);
-    }
-  }
-  return pairs;
+// Bonus round: no assigned matches. Players find their own partner in the
+// room, swap Slack IDs, and both type the other's ID. A pair counts when
+// the claims are mutual AND the pairing rules hold. Mutuality is what makes
+// "one pair per person" automatic: each player has a single claimed_match
+// column, so nobody can be half of two mutual pairs at once.
+
+// The pairing rules, shared by claim validation and scoring.
+function rulesOk(a, b) {
+  return a.slack_id !== b.slack_id          // not yourself
+    && a.tech_family !== b.tech_family      // different Tech Family
+    && a.bucket === b.bucket;               // travels the same way
 }
 
-// Bonus lands only when BOTH sides typed each other's ID, and each typed
-// exactly their assigned match. Derived data - nothing is written for it.
+// Player-facing verdict for a claim BEFORE it is written. `other` is the
+// row the typed ID resolved to (undefined if none). Returns { ok: true }
+// or { ok: false, reason: <copy shown under the claim box> }.
+export function validatePartner(me, other, allPlayers = []) {
+  if (!other) {
+    return { ok: false, reason: 'No player with that ID this round - check the spelling.' };
+  }
+  if (other.slack_id === me.slack_id) {
+    return { ok: false, reason: "That's you! Find someone else." };
+  }
+  if (other.tech_family === me.tech_family) {
+    return { ok: false, reason: 'Same Tech Family - find someone from a different one.' };
+  }
+  if (other.bucket !== me.bucket) {
+    return { ok: false, reason: "They don't travel the same way as you - find someone who does." };
+  }
+  if (bonusAwarded(other, allPlayers) && other.claimed_match !== me.slack_id) {
+    return { ok: false, reason: "They're already paired with someone else." };
+  }
+  return { ok: true };
+}
+
+// Mutual claims + rules pass = both get the bonus.
 export function bonusAwarded(player, allPlayers) {
-  if (!player.match_slack_id || !player.claimed_match) return false;
-  if (player.claimed_match !== player.match_slack_id) return false;
-  const other = allPlayers.find(p => p.slack_id === player.match_slack_id);
-  return Boolean(other && other.claimed_match === player.slack_id);
+  if (!player.claimed_match) return false;
+  const other = allPlayers.find(p => p.slack_id === player.claimed_match);
+  if (!other || other.claimed_match !== player.slack_id) return false;
+  return rulesOk(player, other);
 }
 
 export function buildLeaderboard(players, matchBonus = MATCH_BONUS) {
@@ -55,7 +60,6 @@ export function buildLeaderboard(players, matchBonus = MATCH_BONUS) {
 }
 
 export function connectionStats(players) {
-  const matched = players.filter(p => p.match_slack_id);
-  const connected = matched.filter(p => bonusAwarded(p, players));
-  return { connected: connected.length, total: matched.length };
+  const connected = players.filter(p => bonusAwarded(p, players)).length;
+  return { connected, total: players.length };
 }

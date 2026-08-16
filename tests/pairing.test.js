@@ -1,85 +1,108 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { computePairs, bonusAwarded, buildLeaderboard, connectionStats } from '../js/pairing.js';
+import { validatePartner, bonusAwarded, buildLeaderboard, connectionStats } from '../js/pairing.js';
 
+// Minimal player rows - only the columns the pairing logic reads.
 const P = (slack_id, tech_family, bucket, extra = {}) =>
   ({ slack_id, tech_family, bucket, ...extra });
 
-test('pairs same bucket, different tech family', () => {
-  const pairs = computePairs([P('a', 'Mobility', 'Drive'), P('b', 'Deliveries', 'Drive')]);
-  assert.equal(pairs.length, 1);
-  assert.deepEqual(new Set(pairs[0]), new Set(['a', 'b']));
+test('accepts a different-TF, same-bucket partner', () => {
+  const me = P('a', 'Mobility', 'Drive');
+  const other = P('b', 'FS', 'Drive');
+  assert.deepEqual(validatePartner(me, other, [me, other]), { ok: true });
 });
 
-test('never pairs within the same tech family', () => {
-  const pairs = computePairs([P('a', 'Mobility', 'Drive'), P('b', 'Mobility', 'Drive')]);
-  assert.equal(pairs.length, 0);
+test('rejects an unknown ID', () => {
+  const me = P('a', 'Mobility', 'Drive');
+  const verdict = validatePartner(me, undefined, [me]);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reason, /No player with that ID/);
 });
 
-test('never pairs across buckets', () => {
-  const pairs = computePairs([P('a', 'Mobility', 'Drive'), P('b', 'Deliveries', 'Grab')]);
-  assert.equal(pairs.length, 0);
+test('rejects yourself', () => {
+  const me = P('a', 'Mobility', 'Drive');
+  const verdict = validatePartner(me, me, [me]);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reason, /That's you/);
 });
 
-test('maximises pairs when tech families are skewed', () => {
-  const pairs = computePairs([
-    P('m1', 'Mobility', 'Drive'), P('m2', 'Mobility', 'Drive'), P('m3', 'Mobility', 'Drive'),
-    P('d1', 'Deliveries', 'Drive'), P('f1', 'Fin', 'Drive'),
-  ]);
-  assert.equal(pairs.length, 2); // 3 Mobility soak up the two singletons; one left over
+test('rejects the same Tech Family', () => {
+  const me = P('a', 'Mobility', 'Drive');
+  const other = P('b', 'Mobility', 'Drive');
+  const verdict = validatePartner(me, other, [me, other]);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reason, /Same Tech Family/);
 });
 
-test('each player appears in at most one pair', () => {
-  const players = [
-    P('a', 'X', 'B1'), P('b', 'Y', 'B1'), P('c', 'X', 'B1'), P('d', 'Z', 'B1'),
-    P('e', 'X', 'B2'), P('f', 'Y', 'B2'),
-  ];
-  const seen = new Set();
-  for (const [x, y] of computePairs(players)) {
-    assert.ok(!seen.has(x) && !seen.has(y), 'player appeared twice');
-    seen.add(x); seen.add(y);
-  }
+test('rejects a different commute bucket', () => {
+  const me = P('a', 'Mobility', 'Drive');
+  const other = P('b', 'FS', 'Grab');
+  const verdict = validatePartner(me, other, [me, other]);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reason, /travel the same way/);
 });
 
-test('bonus needs mutual claims of the assigned match', () => {
-  const a = P('a', 'X', 'B', { match_slack_id: 'b', claimed_match: 'b' });
-  const b = P('b', 'Y', 'B', { match_slack_id: 'a', claimed_match: 'a' });
-  const c = P('c', 'Z', 'B', { match_slack_id: 'd', claimed_match: 'wrong' });
-  const d = P('d', 'X', 'B', { match_slack_id: 'c', claimed_match: 'c' });
-  const all = [a, b, c, d];
+test('rejects someone already mutually paired with a third player', () => {
+  const me = P('a', 'Mobility', 'Drive');
+  const b = P('b', 'FS', 'Drive', { claimed_match: 'c' });
+  const c = P('c', 'GFB', 'Drive', { claimed_match: 'b' });
+  const verdict = validatePartner(me, b, [me, b, c]);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.reason, /already paired/);
+});
+
+test('accepts someone who has already claimed ME (completing the pair)', () => {
+  const me = P('a', 'Mobility', 'Drive');
+  const b = P('b', 'FS', 'Drive', { claimed_match: 'a' });
+  assert.deepEqual(validatePartner(me, b, [me, b]), { ok: true });
+});
+
+test('bonus needs mutual claims', () => {
+  const a = P('a', 'Mobility', 'Drive', { claimed_match: 'b' });
+  const b = P('b', 'FS', 'Drive', { claimed_match: 'a' });
+  const c = P('c', 'GFB', 'Drive', { claimed_match: 'a' });   // one-sided
+  const all = [a, b, c];
   assert.equal(bonusAwarded(a, all), true);
   assert.equal(bonusAwarded(b, all), true);
-  assert.equal(bonusAwarded(c, all), false); // typed the wrong ID
-  assert.equal(bonusAwarded(d, all), false); // partner has not reciprocated correctly
+  assert.equal(bonusAwarded(c, all), false);
 });
 
-test('no bonus without an assigned match or without a claim', () => {
-  const solo = P('s', 'X', 'B', { claimed_match: 'a' });
-  const quiet = P('q', 'X', 'B', { match_slack_id: 'a' });
-  assert.equal(bonusAwarded(solo, [solo]), false);
-  assert.equal(bonusAwarded(quiet, [quiet]), false);
+test('no bonus without a claim, or when the partner never reciprocates', () => {
+  const a = P('a', 'Mobility', 'Drive');
+  const b = P('b', 'FS', 'Drive', { claimed_match: 'a' });
+  const all = [a, b];
+  assert.equal(bonusAwarded(a, all), false);   // never claimed anyone
+  assert.equal(bonusAwarded(b, all), false);   // claimed a, but a never reciprocated
+});
+
+test('mutual claims still fail the rules: same TF or different bucket', () => {
+  const a = P('a', 'Mobility', 'Drive', { claimed_match: 'b' });
+  const b = P('b', 'Mobility', 'Drive', { claimed_match: 'a' });   // same TF
+  const c = P('c', 'FS', 'Drive', { claimed_match: 'd' });
+  const d = P('d', 'GFB', 'Grab', { claimed_match: 'c' });         // different bucket
+  const all = [a, b, c, d];
+  assert.equal(bonusAwarded(a, all), false);
+  assert.equal(bonusAwarded(b, all), false);
+  assert.equal(bonusAwarded(c, all), false);
+  assert.equal(bonusAwarded(d, all), false);
 });
 
 test('leaderboard adds bonus, sorts desc, excludes non-finishers', () => {
-  const a = P('a', 'X', 'B', { score: 100, match_slack_id: 'b', claimed_match: 'b' });
-  const b = P('b', 'Y', 'B', { score: 50, match_slack_id: 'a', claimed_match: 'a' });
-  const c = P('c', 'Z', 'B', { score: 120 });
-  const late = P('z', 'Z', 'B', { score: null });
+  const a = P('a', 'Mobility', 'Drive', { score: 100, claimed_match: 'b' });
+  const b = P('b', 'FS', 'Drive', { score: 50, claimed_match: 'a' });
+  const c = P('c', 'GFB', 'Grab', { score: 120 });
+  const late = P('late', 'ACE', 'Drive', { score: null });
   const rows = buildLeaderboard([a, b, c, late], 35);
-  assert.deepEqual(rows.map(r => r.slack_id), ['a', 'c', 'b']); // 135, 120, 85
+  assert.deepEqual(rows.map(r => r.slack_id), ['a', 'c', 'b']);   // 135, 120, 85
   assert.equal(rows[0].display_score, 135);
   assert.equal(rows[0].connected, true);
   assert.equal(rows[1].connected, false);
   assert.equal(rows.length, 3);
 });
 
-test('connection stats count matched players only', () => {
-  const a = P('a', 'X', 'B', { match_slack_id: 'b', claimed_match: 'b' });
-  const b = P('b', 'Y', 'B', { match_slack_id: 'a', claimed_match: 'a' });
-  const c = P('c', 'Z', 'B', { match_slack_id: 'd' });
-  const d = P('d', 'X', 'B', { match_slack_id: 'c' });
-  const e = P('e', 'X', 'B');
-  const s = connectionStats([a, b, c, d, e]);
-  assert.equal(s.total, 4);
-  assert.equal(s.connected, 2);
+test('connection stats count everyone as the base', () => {
+  const a = P('a', 'Mobility', 'Drive', { score: 10, claimed_match: 'b' });
+  const b = P('b', 'FS', 'Drive', { score: 20, claimed_match: 'a' });
+  const e = P('e', 'GFB', 'Drive', { score: 0 });
+  assert.deepEqual(connectionStats([a, b, e]), { connected: 2, total: 3 });
 });
