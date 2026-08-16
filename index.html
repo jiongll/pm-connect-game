@@ -14,8 +14,9 @@
     <h1 id="game-title">Grab Rush</h1>
     <p class="tagline">One heat. 90 seconds. Bragging rights.</p>
     <label>Slack ID (this is your name on the leaderboard)
-      <input id="slack-id" placeholder="e.g. jionglin.low" autocomplete="off"
-             autocapitalize="none" spellcheck="false">
+      <span class="id-field"><span class="at">@</span><input id="slack-id"
+             placeholder="jionglin.low" autocomplete="off"
+             autocapitalize="none" spellcheck="false"></span>
     </label>
     <label>Tech Family
       <select id="tech-family"></select>
@@ -40,7 +41,8 @@
   <section id="screen-game" class="screen">
     <div id="hud">
       <span>Score <b id="hud-score">0</b></span>
-      <span id="hud-tier">Standard</span>
+      <span id="hud-name"></span>
+      <span id="hud-tier">GrabBike</span>
       <span><b id="hud-time">90</b>s</span>
     </div>
     <div id="question-banner"><p id="q-text"></p><div id="q-options"></div></div>
@@ -51,16 +53,19 @@
   <section id="screen-results" class="screen">
     <h2>Finished!</h2>
     <p class="big-score"><span id="final-score">0</span> <span>pts</span></p>
-    <p>You finished in the <b id="final-tier">Standard</b> tier.</p>
+    <p>You finished in the <b id="final-tier">GrabBike</b> tier.</p>
     <p id="submit-status"></p>
     <div id="match-block">
-      <h3>Your match</h3>
-      <p id="match-instructions">When the host opens the match round, your match appears here.</p>
-      <p class="match-name" id="match-name"></p>
-      <p id="match-context"></p>
+      <h3>Bonus round</h3>
+      <p id="bonus-timer"></p>
+      <p class="self-label">You are</p>
+      <p class="self-id" id="self-id"></p>
+      <p class="self-label">Show this screen when you meet someone.</p>
+      <p id="match-instructions"></p>
       <div id="claim-form">
-        <input id="claim-input" placeholder="Their Slack ID" autocomplete="off"
-               autocapitalize="none" spellcheck="false">
+        <span class="id-field"><span class="at">@</span><input id="claim-input"
+               placeholder="their.slack.id" autocomplete="off"
+               autocapitalize="none" spellcheck="false"></span>
         <button id="claim-btn" class="primary">We met - confirm</button>
       </div>
       <p id="claim-status"></p>

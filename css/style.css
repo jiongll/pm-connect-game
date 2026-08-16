@@ -15,6 +15,18 @@ input, select {
 }
 label { display: block; margin: .9rem 0; font-size: .95rem; }
 label > input, label > select { margin-top: .35rem; }
+/* @-prefixed ID fields - the @ is furniture, users type only the ID */
+.id-field {
+  display: flex; align-items: center;
+  background: #131a16; border: 1px solid #2c3a31; border-radius: 10px;
+}
+label .id-field { margin-top: .35rem; }
+.id-field:focus-within { border-color: #00b14f; }
+.id-field .at { padding-left: .85rem; color: #9db3a6; font-weight: 700; }
+.id-field input {
+  flex: 1; margin: 0; border: 0; background: transparent; padding-left: .3rem;
+}
+.id-field input:focus { outline: none; }
 .primary {
   display: block; width: 100%; margin-top: 1.2rem; padding: .95rem;
   font-size: 1.05rem; font-weight: 700; border: 0; border-radius: 12px;
@@ -49,6 +61,7 @@ label > input, label > select { margin-top: .35rem; }
   padding: .6rem 1rem; font-size: 1rem; background: #101512;
 }
 #hud b { color: #00b14f; }
+#hud-name { color: #9db3a6; font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28%; }
 #question-banner {
   display: none; position: absolute; inset: 0; z-index: 5;
   background: rgba(6, 12, 9, .93);
@@ -83,7 +96,12 @@ label > input, label > select { margin-top: .35rem; }
   background: #10231a; border: 1px solid #1e4a33;
 }
 #match-block h3 { color: #00b14f; margin-bottom: .5rem; }
-.match-name { font-size: 1.7rem; font-weight: 800; margin: .5rem 0; }
+#screen-results #bonus-timer { color: #ffd76a; font-weight: 800; min-height: 1.3em; }
+.self-label { color: #9db3a6; margin: .2rem 0; }
+.self-id {
+  font-size: 2.4rem; font-weight: 800; color: #ffd76a;
+  margin: .1rem 0 .4rem; word-break: break-all;
+}
 #claim-form { display: none; margin-top: .8rem; }
 #claim-status { margin-top: .6rem; color: #b9e8cd; min-height: 1.2em; }
 

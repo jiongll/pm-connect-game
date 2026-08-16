@@ -1,9 +1,11 @@
-import { GAME_NAME, TECH_FAMILIES, BUCKET_QUESTION, BUCKET_OPTIONS, MATCH_BONUS } from './config.js';
+import { GAME_NAME, TECH_FAMILIES, BUCKET_QUESTION, BUCKET_OPTIONS,
+         MATCH_BONUS, BONUS_ROUND_MS } from './config.js';
 import { QUESTIONS } from './questions.js';
 import { TIERS } from './scoring.js';
 import { startGame } from './game.js';
 import * as db from './db.js';
-import { bonusAwarded } from './pairing.js';
+import { bonusAwarded, validatePartner } from './pairing.js';
+import { computePhase } from './phase.js';
 
 const $ = id => document.getElementById(id);
 const SCREENS = ['entry', 'waiting', 'countdown', 'game', 'results'];
@@ -70,14 +72,20 @@ function onState(state) {
     location.reload();                          // clean slate, back to the entry form
     return;
   }
-  if (state.status === 'started' && appState === 'waiting') beginCountdown();
-  if (state.status === 'match_round' && appState === 'waiting') {
-    appState = 'results';
-    show('results');
-    $('final-score').textContent = me.score ?? 0;
-    enterMatchRound();
-  }
-  if (state.status === 'match_round' && appState === 'results') enterMatchRound();
+  if (state.status !== 'started' || appState !== 'waiting') return;
+  const p = computePhase(state.started_at, Date.now());
+  if (!p || p.phase === 'heat') { beginCountdown(); return; }
+  showResultsShell();                           // joined or restored after the heat
+  enterBonus(p.phase === 'bonus' ? p.bonusRemainingMs : 0);
+}
+
+// Results screen for someone who never drove this heat (late joiner or a
+// refresh after the heat ended): score 0 is already on the board from join.
+function showResultsShell() {
+  appState = 'results';
+  show('results');
+  $('final-score').textContent = me.score ?? 0;
+  $('final-tier').parentElement.style.display = 'none';   // no run, no tier line
 }
 
 function beginCountdown() {
@@ -95,6 +103,7 @@ function beginCountdown() {
 function play() {
   appState = 'playing';
   show('game');
+  $('hud-name').textContent = '@' + (me ? me.slack_id : 'you');
   startGame($('game-canvas'),
     { score: $('hud-score'), tier: $('hud-tier'), time: $('hud-time'),
       banner: $('question-banner'), question: $('q-text'), options: $('q-options') },
@@ -108,6 +117,7 @@ async function onGameFinish(finalScore, tier) {
   $('final-tier').textContent = TIERS[tier];
   if (solo) {
     $('submit-status').textContent = 'Solo mode - score not submitted.';
+    $('match-block').style.display = 'none';    // no backend, no bonus round
     return;
   }
   $('submit-status').textContent = 'Sending your score...';
@@ -115,54 +125,60 @@ async function onGameFinish(finalScore, tier) {
   $('submit-status').textContent = ok
     ? 'Score is on the leaderboard!'
     : 'Could not reach the leaderboard - show this screen to the host.';
-  db.onOwnRow(me.id, row => {
-    me = { ...me, ...row };
-    if (row.match_slack_id) showMatch(row);
-  });
+  const state = await db.getGameState();        // shared anchor for the deadline
+  const p = state ? computePhase(state.started_at, Date.now()) : null;
+  enterBonus(p ? p.bonusRemainingMs : BONUS_ROUND_MS);
 }
 
-let pollMatch = null;
-let claimWired = false;
-let connectedDone = false;
-let matchEntered = false;
+let bonusEntered = false, connectedDone = false;
+let deadline = 0, tickIv = null, pollIv = null;
 
-async function enterMatchRound() {
-  if (matchEntered) return;   // onState re-fires on every poll tick; run setup once
-  matchEntered = true;
-  try {
-    const row = await db.getPlayer(me.id);
-    me = { ...me, ...row };
-    if (row.match_slack_id) showMatch(row); else showNoMatch();
-  } catch { matchEntered = false; /* retry on the next poll tick */ }
-}
-
-function showNoMatch() {
+function enterBonus(remainingMs) {
+  if (bonusEntered) return;                     // poll ticks re-fire; set up once
+  bonusEntered = true;
+  deadline = Date.now() + remainingMs;
+  $('self-id').textContent = '@' + me.slack_id;
   $('match-instructions').textContent =
-    'No match this round - your score stands. Go and say hello to someone anyway.';
-}
-
-function showMatch(row) {
-  if (connectedDone) return;   // poll callbacks repeat; never resurrect the form
-  $('match-instructions').textContent =
-    'Find this person - in the room or on Slack. Swap Slack IDs, type theirs below, '
-    + 'and you both get +' + MATCH_BONUS + '.';
-  $('match-name').textContent = '@' + row.match_slack_id;
-  $('match-context').textContent =
-    'You both answered "' + row.bucket + '" - and they are from a different Tech Family.';
+    'Find someone from a different Tech Family who travels to the office a different way. '
+    + 'Swap Slack IDs, type theirs below - you both get +' + MATCH_BONUS + '. '
+    + 'Tip: you can also find someone on Slack.';
   $('claim-form').style.display = 'block';
-  if (!claimWired) {
-    claimWired = true;
-    $('claim-btn').addEventListener('click', claim);
-  }
-  if (!pollMatch) pollMatch = setInterval(checkConnected, 4000);
+  $('claim-btn').addEventListener('click', claim);
+  bonusTick();
+  tickIv = setInterval(bonusTick, 250);
+  pollIv = setInterval(checkConnected, 4000);
+  checkConnected();
+}
+
+function bonusTick() {
+  const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+  if (left > 0) { $('bonus-timer').textContent = 'Bonus round: ' + left + 's left'; return; }
+  clearInterval(tickIv);                        // the lock
+  $('bonus-timer').textContent = '';
+  $('claim-form').style.display = 'none';
+  if (!connectedDone) $('claim-status').textContent = 'Bonus round closed - your score stands.';
+  // Grace: a partner's claim may have landed right at the buzzer.
+  setTimeout(() => { checkConnected().finally(() => clearInterval(pollIv)); }, 5000);
 }
 
 async function claim() {
   $('claim-btn').disabled = true;
   try {
-    await db.claimMatch(me.id, $('claim-input').value);
-    $('claim-status').textContent =
-      'Saved. Waiting for them to enter yours... Typo? Fix it and press again.';
+    const typed = db.normaliseSlackId($('claim-input').value);
+    if (!typed) { $('claim-status').textContent = 'Type their Slack ID first.'; return; }
+    const players = await db.getPlayers(me.session);
+    if (players.length === 0) {                 // fetch failed; we are in there ourselves
+      $('claim-status').textContent = 'Could not reach the game - try again.';
+      return;
+    }
+    // Resolve to the stored row case-insensitively; write the CANONICAL stored
+    // slack_id, never the raw input - pairing.js comparisons are strict ===.
+    const other = players.find(pl => String(pl.slack_id).toLowerCase() === typed);
+    const verdict = validatePartner(me, other, players);
+    if (!verdict.ok) { $('claim-status').textContent = verdict.reason; return; }
+    await db.claimMatch(me.id, other.slack_id);
+    me = { ...me, claimed_match: other.slack_id };
+    $('claim-status').textContent = 'Saved. Now make sure they type YOUR ID too.';
     checkConnected();
   } catch (err) {
     $('claim-status').textContent = err.message;
@@ -172,11 +188,12 @@ async function claim() {
 }
 
 async function checkConnected() {
+  if (connectedDone) return;
   const players = await db.getPlayers(me.session);
-  const mine = players.find(p => p.id === me.id);
+  const mine = players.find(pl => pl.id === me.id);
   if (mine && bonusAwarded(mine, players)) {
     connectedDone = true;
-    clearInterval(pollMatch);
+    clearInterval(pollIv);
     $('claim-status').textContent = 'Connected! +' + MATCH_BONUS + ' points for you both.';
     $('claim-form').style.display = 'none';
   }
