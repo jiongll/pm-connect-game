@@ -104,3 +104,16 @@ export function playChime() {                 // connection made: soft two-note 
   tone(784, 0.12, { type: 'triangle', peak: 0.7 });
   tone(1175, 0.28, { type: 'triangle', at: 0.1, peak: 0.7 });
 }
+
+export function playPairDing() {              // projector: a pair just landed (R43)
+  if (!ready()) return;
+  tone(1318, 0.08, { type: 'triangle', peak: 0.45 });
+  tone(1760, 0.2, { type: 'triangle', at: 0.06, peak: 0.45 });
+}
+
+export function playRevealSting(step = 0) {   // podium: 0 third, 1 second, 2 first - each higher (R44)
+  if (!ready()) return;
+  const base = [392, 494, 587][Math.min(step, 2)];   // G4, B4, D5 - a rising triad across the presses
+  tone(base, 0.12, { type: 'square', peak: 0.55 });
+  tone(base * 1.5, step === 2 ? 0.45 : 0.22, { type: 'square', at: 0.11, peak: 0.55 });
+}

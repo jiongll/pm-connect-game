@@ -31,9 +31,10 @@
     <div>
       <div id="qr"></div>
       <span id="player-url"></span>
+      <p id="how-to-strip"></p>
     </div>
     <div>
-      <p class="count-big"><span id="join-count">0</span> in the waiting room</p>
+      <p class="count-big"><span id="join-count">0</span><span id="join-label"> in the waiting room</span></p>
       <div id="join-list"></div>
       <button id="start-heat" class="admin-btn" style="margin-top:1.6rem">Start the heat</button>
     </div>
@@ -43,9 +44,13 @@
 <div id="view-heat" class="admin-view">
   <div class="admin-head">
     <h1>Heat in progress</h1>
-    <span id="heat-timer">93</span>
     <span><span id="finished-count">0</span> on the board</span>
     <button class="admin-btn ghost new-game">Start new game</button>
+  </div>
+  <div id="heat-billboard">
+    <div id="heat-timer">93</div>
+    <p id="racing-line"></p>
+    <div class="road-strip big" aria-hidden="true"></div>
   </div>
   <table class="board"><tbody id="board-heat"></tbody></table>
 </div>
@@ -53,12 +58,36 @@
 <div id="view-match" class="admin-view">
   <div class="admin-head">
     <h1 id="match-title">Bonus round</h1>
-    <span id="bonus-timer"></span>
     <span id="connected-count">0 of 0 connected</span>
     <button class="admin-btn ghost new-game">Start new game</button>
   </div>
-  <p id="bonus-rule"></p>
+  <div id="bonus-billboard">
+    <div id="bonus-timer"></div>
+    <p id="bonus-rule"></p>
+    <p id="pair-counter">0 pairs</p>
+    <ul id="pair-ticker"></ul>
+    <p id="admin-remote-line"><b>Joining remotely?</b> Drop your @id in the session Slack thread - anyone, anywhere can pair with you.</p>
+  </div>
+  <div id="reveal-bar">
+    <button id="reveal-btn" class="admin-btn">Reveal the podium</button>
+    <span id="reveal-hint">or press space &middot; double-press shows everything</span>
+  </div>
+  <ol id="podium"></ol>
+  <div id="awards"></div>
   <table class="board"><tbody id="board-match"></tbody></table>
+</div>
+
+<div id="admin-countdown" aria-hidden="true"><span id="admin-count-num">3</span></div>
+
+<div id="modal-backdrop">
+  <div id="modal-box" role="dialog" aria-modal="true">
+    <h2 id="modal-title"></h2>
+    <p id="modal-line"></p>
+    <div id="modal-actions">
+      <button id="modal-cancel" class="admin-btn ghost">Cancel</button>
+      <button id="modal-confirm" class="admin-btn">Confirm</button>
+    </div>
+  </div>
 </div>
 
 <script type="module" src="js/admin-app.js"></script>

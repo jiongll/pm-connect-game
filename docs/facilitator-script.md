@@ -12,9 +12,9 @@
 
 ## Script
 
-You press ONE button all game: **Start the heat**. Everything after it -
-the 90-second drive, the bonus round, the final board - runs on a shared
-clock, automatically.
+You press TWO buttons all game: **Start the heat**, and once entries
+lock, **Reveal the podium**. Everything between them - the 90-second
+drive, the bonus round - runs on a shared clock, automatically.
 
 **0:00** - "Phones out, scan the QR - or grab the link pinned in Slack.
 Slack ID, Tech Family, one question. You have two minutes."
@@ -34,13 +34,19 @@ clock runs even during quiz questions.
 rule aloud: "Find someone from a DIFFERENT Tech Family who travels a
 DIFFERENT way to the office. Show them the big @name on your phone, swap
 IDs, you BOTH type each other's in. Both of you get +35. Can't find
-anyone nearby? Ping someone on Slack. Remote folks: DM someone on the
-call. 90 seconds - go."
+anyone nearby? Ping someone on Slack. Remote folks: drop your @id in
+the session Slack thread - anyone, anywhere can pair with you. 90
+seconds - go."
 Commentate the connected counter as pairs land.
 
-**~5:05** - The screen flips to the final board on its own; entries lock.
-Crown the winner: "drove well AND got off their chair." Note the
-connected counter: "X new cross-TF conversations in 90 seconds."
+**~5:05** - Entries lock and the big screen goes quiet: a **Reveal the
+podium** button appears. Give it a beat (the last scores land within
+seconds), then press it - or tap spacebar - once per place: 3rd... 2nd...
+1st. Milk each one. A final press brings up the full board and three
+award lines: read the Scenic Route Award with love, the Fastest fleet
+line as a challenge, and the room total as the closer ("X points, Y new
+cross-TF connections in 90 seconds"). Crown the winner: "drove well AND
+got off their chair." In a rush? Double-press reveals everything at once.
 
 **5:30-10:00** - Top 3 stand up / wave on the call. One line each: name,
 Tech Family. Segue into the session.

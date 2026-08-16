@@ -307,3 +307,118 @@ body.admin #gate-error { color: #ff7a7a; min-height: 1.2em; margin: 0; }
   50% { transform: scale(1.06); }
 }
 #rank-line { color: #ffd76a; font-weight: 800; font-size: 1.1rem; min-height: 1.2em; }
+
+/* ── Delight pass: admin countdown mirror (R11) ─────────────────── */
+#admin-countdown {
+  display: none; position: fixed; inset: 0; z-index: 40;
+  background: rgba(6, 12, 9, .94);
+  align-items: center; justify-content: center;
+}
+#admin-countdown.visible { display: flex; }
+#admin-count-num {
+  font-size: 16rem; font-weight: 800; line-height: 1;
+  animation: adminPop 300ms ease-out;
+}
+#admin-count-num.c3 { color: #00b14f; }
+#admin-count-num.c2 { color: #ffb84d; }
+#admin-count-num.c1 { color: #ffd76a; }
+#admin-count-num.go { color: #00b14f; }
+@keyframes adminPop {
+  from { transform: scale(1.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ── Delight pass: setup stage (R37, R38, R40) ──────────────────── */
+#how-to-strip { color: #9db3a6; margin-top: .8rem; font-size: 1.05rem; max-width: 340px; }
+#join-count { display: inline-block; }        /* a transform needs a box */
+.bump { animation: bumpPulse 200ms ease-out; }
+@keyframes bumpPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+/* ── Delight pass: heat billboard (R41) ─────────────────────────── */
+#heat-billboard { text-align: center; padding: 4rem 0 2rem; }
+#heat-billboard #heat-timer { font-size: 11rem; line-height: 1; display: block; }
+#racing-line { font-size: 2rem; color: #cde7d8; font-weight: 700; margin: 1rem 0 2rem; }
+.road-strip.big {
+  height: 14px; border-radius: 7px; max-width: 720px; margin: 0 auto;
+  background: repeating-linear-gradient(90deg,
+    #2c2c35 0 68px, #f2f5f3 68px 104px);
+  animation: roadScrollBig 2s linear infinite;
+}
+@keyframes roadScrollBig {
+  from { background-position: 0 0; }
+  to { background-position: -208px 0; }
+}
+
+/* ── Delight pass: bonus billboard + pair ticker (R42, R43) ─────── */
+#bonus-billboard { text-align: center; padding: 1rem 0; }
+#bonus-billboard #bonus-timer { font-size: 9rem; line-height: 1; }
+body.admin #bonus-billboard #bonus-rule {
+  color: #cfe3d6; font-size: 1.6rem; max-width: 60rem; margin: .6rem auto 1rem;
+}
+#pair-counter {
+  font-size: 3rem; font-weight: 800; color: #00b14f;
+  display: inline-block; margin: .4rem 0 1rem;
+}
+#pair-ticker { list-style: none; max-width: 46rem; margin: 0 auto; padding: 0; font-size: 1.5rem; }
+#pair-ticker li { padding: .35rem 0; color: #cde7d8; animation: tickerIn 300ms ease-out; }
+@keyframes tickerIn {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+#admin-remote-line { color: #9db3a6; margin-top: 1.2rem; font-size: 1.15rem; }
+#admin-remote-line b { color: #cde7d8; }
+
+/* ── Delight pass: podium reveal + awards (R44-R48) ─────────────── */
+#reveal-bar { text-align: center; padding: 3rem 0 1rem; }
+#reveal-hint { display: block; margin-top: .8rem; color: #9db3a6; font-size: .95rem; }
+#podium {
+  list-style: none; max-width: 46rem; margin: 1rem auto; padding: 0;
+  font-size: 2.2rem; text-align: center;
+}
+#podium li {
+  padding: .7rem 0; font-weight: 800; color: #cde7d8;
+  border-radius: 12px;
+  animation: podiumIn 450ms ease-out;
+}
+#podium li small { color: #8fae9c; font-size: 1.4rem; font-weight: 700; margin: 0 .4rem; }
+#podium li b { color: #ffd76a; }
+#podium li.p1 {
+  color: #ffd76a; font-size: 2.8rem;
+  animation: podiumIn 450ms ease-out, goldFlash 900ms ease-out;
+}
+@keyframes podiumIn {
+  from { transform: translateY(18px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes goldFlash {
+  0% { background: rgba(255, 215, 106, 0); }
+  25% { background: rgba(255, 215, 106, .35); }
+  100% { background: rgba(255, 215, 106, 0); }
+}
+#awards { max-width: 46rem; margin: 1.2rem auto 0; text-align: center; }
+.award { font-size: 1.35rem; color: #cde7d8; margin: .5rem 0; animation: tickerIn 300ms ease-out; }
+#view-match .board { animation: boardIn 500ms ease-out; }
+@keyframes boardIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ── Delight pass: in-page modal (R49) ──────────────────────────── */
+#modal-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 50;
+  background: rgba(4, 8, 6, .72);
+  align-items: center; justify-content: center;
+}
+#modal-backdrop.visible { display: flex; }
+#modal-box {
+  background: #131a16; border: 1px solid #2c3a31; border-radius: 16px;
+  padding: 1.6rem 1.8rem; max-width: 30rem; width: calc(100% - 4rem);
+}
+#modal-box h2 { color: #f2f5f3; margin-bottom: .5rem; }
+#modal-line { color: #9db3a6; }
+#modal-actions { display: flex; gap: .8rem; justify-content: flex-end; margin-top: 1.4rem; }
+#modal-actions .ghost { margin-left: 0; }
