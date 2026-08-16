@@ -6,6 +6,7 @@ import { startGame } from './game.js';
 import * as db from './db.js';
 import { bonusAwarded, validatePartner } from './pairing.js';
 import { computePhase } from './phase.js';
+import { unlockAudio, playTick, playGo } from './sound.js';
 
 const $ = id => document.getElementById(id);
 const SCREENS = ['entry', 'waiting', 'countdown', 'game', 'results'];
@@ -45,6 +46,7 @@ async function init() {
 }
 
 async function join() {
+  unlockAudio();                              // first user gesture unlocks sound
   $('entry-error').textContent = '';
   $('join-btn').disabled = true;
   try {
@@ -93,10 +95,11 @@ function beginCountdown() {
   show('countdown');
   let n = 3;
   $('count-num').textContent = n;
+  playTick();
   const iv = setInterval(() => {
     n -= 1;
-    if (n === 0) { clearInterval(iv); play(); }
-    else $('count-num').textContent = n;
+    if (n === 0) { clearInterval(iv); playGo(); play(); }
+    else { $('count-num').textContent = n; playTick(); }
   }, 1000);
 }
 

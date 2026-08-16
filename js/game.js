@@ -3,6 +3,7 @@ import { HEAT_DURATION_MS, TIER_BONUS, COIN_POINTS, COLLISION_PENALTY,
          BOOST_MULTIPLIER, BOOST_SECONDS, QUIZ_COUNT, QUIZ_SECONDS,
          QUIZ_FIRST_AT, QUIZ_LAST_AT } from './config.js';
 import * as S from './scoring.js';
+import { unlockAudio, playCoin, playCrash, playLevelUp, playFinish } from './sound.js';
 
 // Grab app visual language: white fleet, green glass, charcoal wheels,
 // dark premium tiers. One palette, used by every drawing below.
@@ -63,6 +64,7 @@ export function startGame(canvas, hud, questions, onFinish) {
   function moveLeft() { carLane = Math.max(0, carLane - 1); }
   function moveRight() { carLane = Math.min(2, carLane + 1); }
   function onPointer(e) {
+    unlockAudio();                             // solo runs and restored sessions never press Join
     if (quiz) return;                          // frozen while answering
     const x = (e.touches ? e.touches[0].clientX : e.clientX)
       - canvas.getBoundingClientRect().left;
@@ -136,6 +138,7 @@ export function startGame(canvas, hud, questions, onFinish) {
     const atMax = tier === S.TIERS.length - 1;   // already Exec
     tier = S.answerQuestion(tier, correct);
     if (correct && atMax) score += TIER_BONUS;   // Exec: quizzes stay worth taking
+    if (correct) playLevelUp();
     if (correct) popScore('+' + TIER_BONUS, laneCenter(carLane), carY() - 70, true);
     if (correct) boostUntil = elapsed + BOOST_SECONDS;
     feedback = correct
@@ -178,6 +181,7 @@ export function startGame(canvas, hud, questions, onFinish) {
         || (S.tierHasMagnet(tier) && Math.abs(c.lane - carLane) === 1);
       if (near && laneOk) {
         score = S.collectCoin(score);
+        playCoin();
         popScore('+' + COIN_POINTS, laneCenter(c.lane), c.y, true);
         return false;
       }
@@ -188,6 +192,7 @@ export function startGame(canvas, hud, questions, onFinish) {
       if (Math.abs(o.y - carY()) < 50 && o.lane === carLane
           && elapsed > invulnUntil) {
         score = S.hitObstacle(score);
+        playCrash();
         invulnUntil = elapsed + 1.2;
         popScore('-' + COLLISION_PENALTY, laneCenter(o.lane), o.y, false);
         return false;
@@ -450,6 +455,7 @@ export function startGame(canvas, hud, questions, onFinish) {
     canvas.removeEventListener('pointerdown', onPointer);
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', resize);
+    playFinish();
     onFinish(S.finalScore(score, tier), tier);
   }
 
