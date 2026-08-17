@@ -44,6 +44,15 @@ export const TECH_FAMILIES = [
   'Other',
 ];
 
-// PLACEHOLDER bucket question - may be swapped before the event.
+// Options finalised from playtest feedback. Keys of OPENERS in
+// js/player-app.js must match these character for character.
 export const BUCKET_QUESTION = 'How do you commute to work?';
-export const BUCKET_OPTIONS = ['Grab', 'Train / Bus / Walk', 'Drive', 'Get dropped off'];
+export const BUCKET_OPTIONS = [
+  'Grab',
+  'Drive a car',
+  'Ride a motorbike',
+  'Ride a bicycle',
+  'Walk',
+  'Train / Bus',
+  'Get a lift',
+];

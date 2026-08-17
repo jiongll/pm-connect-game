@@ -392,9 +392,12 @@ function celebrate(mine, players) {
   // BUCKET_OPTIONS in js/config.js character for character.
   const OPENERS = {
     'Grab': 'Ask them their best back-seat story.',
-    'Train / Bus / Walk': "Ask them the worst thing about their route - there's always one.",
-    'Drive': 'Ask them where they park. Watch their face.',
-    'Get dropped off': "Dropped off - by whom? There's a story there.",
+    'Drive a car': 'Ask them where they park. Watch their face.',
+    'Ride a motorbike': 'Ask them about their worst caught-in-the-rain morning.',
+    'Ride a bicycle': 'Ask them how they arrive not-sweaty. Or whether they do.',
+    'Walk': 'Ask them what they listen to on the walk.',
+    'Train / Bus': "Ask them the worst thing about their route - there's always one.",
+    'Get a lift': "A lift - from whom? There's a story there.",
   };
   const partner = players.find(pl => String(pl.slack_id) === mine.claimed_match);
   $('opener-head').textContent = '+' + MATCH_BONUS + ' banked. Now the real game: talk.';
