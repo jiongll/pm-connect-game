@@ -14,7 +14,7 @@
     <h1 id="game-title">Grab Rush</h1>
     <p class="tagline">Grab PM Grand Prix</p>
     <div class="road-strip" aria-hidden="true"></div>
-    <label>Slack ID (this is your name on the leaderboard)
+    <label>Slack ID (your leaderboard name)
       <span class="id-field"><span class="at">@</span><input id="slack-id"
              placeholder="slack.id" autocomplete="off"
              autocapitalize="none" spellcheck="false"></span>
@@ -27,6 +27,7 @@
     </label>
     <button id="join-btn" class="primary">Join the starting grid</button>
     <p id="entry-error" class="error"></p>
+    <div class="road-horizon" aria-hidden="true"><i></i></div>
   </section>
 
   <section id="screen-waiting" class="screen">
@@ -72,7 +73,7 @@
       <p class="self-id" id="self-id" title="Tap to copy"></p>
       <p id="copy-toast"></p>
       <div id="self-badges"><span class="badge" id="badge-tf"></span><span class="badge" id="badge-bucket"></span></div>
-      <p id="badge-rule">Pair with someone where <b>both</b> badges differ. Show them this screen.</p>
+      <p id="badge-rule">Pair up: <b>both</b> badges must differ. Show your screen.</p>
       <p id="match-instructions"></p>
       <div id="claim-form">
         <span class="id-field"><span class="at">@</span><input id="claim-input"

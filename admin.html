@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PM Connect - GrabRush!</title>
+<title>Grab Rush - PM Connect</title>
 <link rel="stylesheet" href="css/style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3"></script>
 <script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@04f46c6a0708418cb7b96fc563eacae0fbf77674/qrcode.min.js"></script>
@@ -12,7 +12,8 @@
 
 <div id="view-gate" class="admin-view active">
   <div id="gate-box">
-    <h1>PM Connect - GrabRush!</h1>
+    <h1>Grab Rush</h1>
+    <div class="chequer" aria-hidden="true"></div>
     <label>Admin password
       <input id="admin-pass" type="password" autocomplete="off">
     </label>
@@ -23,9 +24,10 @@
 
 <div id="view-setup" class="admin-view">
   <div class="admin-head">
-    <h1 id="admin-title">PM Connect - GrabRush!</h1>
+    <h1 id="admin-title">Grab Rush</h1>
     <button class="admin-btn ghost new-game">Start new game</button>
   </div>
+  <div class="chequer" aria-hidden="true"></div>
   <p class="tagline">Grab PM Grand Prix</p>
   <p id="admin-error" class="error"></p>
   <div id="setup-grid">

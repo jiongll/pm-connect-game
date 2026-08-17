@@ -5,7 +5,7 @@ import { computePhase } from './phase.js';
 import { unlockAudio, playPairDing, playRevealSting, playChime } from './sound.js';
 
 const $ = id => document.getElementById(id);
-const ADMIN_TITLE = 'PM Connect - GrabRush!';
+const ADMIN_TITLE = 'Grab Rush - PM Connect';
 const ADMIN_PASS = 'grabrocket';        // client-side deterrent only - this file is public
 const UNLOCK_KEY = 'grabrush_admin_ok';
 
@@ -27,7 +27,6 @@ init();
 // room, nothing more. sessionStorage survives a refresh, not a new tab.
 function init() {
   document.title = ADMIN_TITLE;
-  $('admin-title').textContent = ADMIN_TITLE;
   if (sessionStorage.getItem(UNLOCK_KEY) === '1') { boot(); return; }
   showView('gate');
   const tryUnlock = () => {
@@ -52,7 +51,7 @@ async function boot() {
     + 'You can also find people on Slack.';
 
   const playerUrl = location.href.replace(/admin\.html.*$/, '');
-  try { new QRCode($('qr'), { text: playerUrl, width: 300, height: 300 }); }
+  try { new QRCode($('qr'), { text: playerUrl, width: 420, height: 420 }); }
   catch { /* the plain URL below is the fallback */ }
   $('player-url').textContent = playerUrl;
 
@@ -360,7 +359,7 @@ function renderFinal(rows) {
     if (!r) continue;                   // fewer than three drivers: skip the gap
     const li = document.createElement('li');
     li.className = place.cls;
-    li.innerHTML = place.label + ' - @' + esc(r.slack_id)
+    li.innerHTML = place.label + '<br>@' + esc(r.slack_id)
       + '<small>' + esc(r.tech_family) + '</small><b>' + r.display_score + '</b>';
     $('podium').appendChild(li);
   }

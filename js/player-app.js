@@ -265,9 +265,8 @@ function enterBonus(remainingMs) {
   $('badge-bucket').textContent = me.bucket;
   $('self-id').addEventListener('click', copyId);
   $('match-instructions').textContent =
-    'Find someone from a different Tech Family who travels to the office a different way. '
-    + 'Swap Slack IDs, type theirs below - you both get +' + MATCH_BONUS + '. '
-    + 'Tip: you can also find someone on Slack.';
+    'Swap Slack IDs and type theirs below - you both bank +' + MATCH_BONUS + '. '
+    + 'No match nearby? Try Slack.';
   $('claim-form').style.display = 'block';
   $('claim-btn').addEventListener('click', claim);
   if (me.claimed_match) lockClaim();            // refreshed mid-round with a claim already saved
