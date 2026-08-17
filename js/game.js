@@ -404,8 +404,16 @@ export function startGame(canvas, hud, questions, onFinish) {
   function drawVehicle(cx, cy) {               // the player, one drawing per tier
     const flash = elapsed < invulnUntil && Math.floor(elapsed * 10) % 2 === 0;
     ctx.globalAlpha = flash ? 0.4 : 1;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';      // shared ground shadow
-    ctx.beginPath(); ctx.ellipse(cx, cy + 42, 30, 8, 0, 0, Math.PI * 2); ctx.fill();
+    // The sprites are drawn from directly overhead, so a shadow offset below
+    // the vehicle would read as a low sun and fight the viewpoint. One soft
+    // pool centred under the body is what an overhead view actually shows.
+    const sh0 = SPRITE_H[tier];
+    const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, sh0 * 0.42);
+    grd.addColorStop(0, 'rgba(0, 0, 0, 0.38)');
+    grd.addColorStop(0.6, 'rgba(0, 0, 0, 0.22)');
+    grd.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = grd;
+    ctx.beginPath(); ctx.arc(cx, cy, sh0 * 0.42, 0, Math.PI * 2); ctx.fill();
     const sp = sprites.ready && sprites.list[tier];
     if (sp) {
       const sh = SPRITE_H[tier], sw = sh * sp.w / sp.h;
