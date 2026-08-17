@@ -216,9 +216,6 @@ body.admin #gate-box .chequer { max-width: none; margin: -.4rem 0 .2rem; }
 }
 .warmup-hint { font-size: .85rem; }
 #ladder-line { font-size: .85rem; margin-top: .4rem; }
-#rung-dots { display: flex; justify-content: center; gap: .45rem; margin-top: .5rem; }
-#rung-dots i { width: 8px; height: 8px; border-radius: 50%; background: #2c3a31; }
-#rung-dots i.lit { background: #00b14f; }
 
 /* ── Delight pass: countdown (R9) ───────────────────────────────── */
 #count-num.pop { animation: digitPop 300ms ease-out; }
