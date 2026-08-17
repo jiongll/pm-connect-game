@@ -373,6 +373,11 @@ body.admin #gate-box .chequer { max-width: none; margin: -.4rem 0 .2rem; }
 }
 #rank-line { color: #ffd76a; font-weight: 800; font-size: 1.1rem; min-height: 1.2em; }
 
+/* Results: the ride you earned, then the run in three numbers. The canvas is
+   block-level and full width because the sprite is centred inside it. */
+#final-ride { display: block; width: 100%; height: 120px; }
+#run-recap { color: #9db3a6; font-size: .9rem; margin-top: .3rem; }
+
 /* ── Delight pass: admin countdown mirror (R11) ─────────────────── */
 #admin-countdown {
   display: none; position: fixed; inset: 0; z-index: 40;

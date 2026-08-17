@@ -2,7 +2,7 @@ import { GAME_NAME, TECH_FAMILIES, BUCKET_QUESTION, BUCKET_OPTIONS,
          MATCH_BONUS, BONUS_ROUND_MS, LIVE_PUSH_MS } from './config.js';
 import { QUESTIONS } from './questions.js';
 import { TIERS } from './scoring.js';
-import { startGame, drawBikeSprite } from './game.js';
+import { startGame, drawBikeSprite, drawTierSprite } from './game.js';
 import * as db from './db.js';
 import { bonusAwarded, validatePartner, connectionStats, buildLeaderboard } from './pairing.js';
 import { computePhase } from './phase.js';
@@ -41,7 +41,8 @@ function startWarmup() {
   const W = canvas.clientWidth, H = 140;       // css pins the height to 140px
   canvas.width = W * dpr; canvas.height = H * dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  $('ladder-line').textContent = 'Your starting ride: ' + TIERS[0];
+  $('ladder-line').textContent =
+    'You start on a ' + TIERS[0] + '. Answer questions to climb to ' + TIERS[TIERS.length - 1] + '.';
 
   let lane = 1, dashOffset = 0, last = null, raf = null;
   const laneCenter = i => W * (0.2 + i * 0.3);
@@ -52,6 +53,16 @@ function startWarmup() {
     e.preventDefault();
   };
   canvas.addEventListener('pointerdown', onTap);
+  // Same keys as the real game, so anyone on a laptop practises the controls
+  // they will actually use. Only the two arrows are claimed - everything else,
+  // including tab and space, must still reach the page.
+  const onKey = e => {
+    if (e.key === 'ArrowLeft') lane = Math.max(0, lane - 1);
+    else if (e.key === 'ArrowRight') lane = Math.min(2, lane + 1);
+    else return;
+    e.preventDefault();
+  };
+  window.addEventListener('keydown', onKey);
 
   const frame = ts => {
     if (last === null) last = ts;
@@ -73,6 +84,7 @@ function startWarmup() {
   warmup = { stop() {
     cancelAnimationFrame(raf);
     canvas.removeEventListener('pointerdown', onTap);
+    window.removeEventListener('keydown', onKey);   // must not outlive the warm-up
   } };
 }
 
@@ -209,6 +221,8 @@ function showResultsShell() {
   show('results');
   $('final-score').textContent = me.score ?? 0;
   $('final-tier').parentElement.style.display = 'none';   // no run, no tier line
+  $('final-ride').style.display = 'none';                 // ...and no ride to show
+  $('run-recap').style.display = 'none';                  // ...and nothing to recap
 }
 
 function setDigit(n) {                        // R9: pop, colour-coded 3-2-1
@@ -269,12 +283,40 @@ function stopLivePush() {
   if (liveIv) { clearInterval(liveIv); liveIv = null; }
 }
 
-async function onGameFinish(finalScore, tier) {
+// The run is worth retelling, so the results screen shows the ride they earned
+// and three numbers they can compare with the person next to them.
+function paintFinalRide(tier) {
+  const canvas = $('final-ride');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.clientWidth, H = 120;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  // Sprites may not have loaded (slow phone, offline): the tier name below is
+  // the real answer, so a blank canvas is an acceptable miss, not a broken one.
+  drawTierSprite(ctx, W / 2, H / 2, tier, 0.9);
+}
+
+function showRecap(stats) {
+  if (!stats) return;
+  const bits = [
+    stats.coins + (stats.coins === 1 ? ' coin' : ' coins'),
+    stats.crashes + (stats.crashes === 1 ? ' cone' : ' cones'),
+  ];
+  if (stats.bestStreak > 1) bits.push('best streak ' + stats.bestStreak);
+  $('run-recap').textContent = bits.join(' · ');
+}
+
+async function onGameFinish(finalScore, tier, stats) {
   stopLivePush();                               // no push may outlive the final write
   appState = 'results';
   show('results');
   $('final-score').textContent = finalScore;
   $('final-tier').textContent = TIERS[tier];
+  paintFinalRide(tier);
+  showRecap(stats);
   if (solo) {
     $('submit-status').textContent = 'Solo mode - score not submitted.';
     $('match-block').style.display = 'none';    // no backend, no bonus round

@@ -40,13 +40,21 @@ const CAR_STYLE = [null, null,
 // The GrabBike sprite, shared by the in-game drawing and the waiting-room
 // warm-up garage (R7/R8). Pure canvas - no game state, no closure.
 // Uses the sheet's bike when sliced; the drawn bike remains the fallback.
-export function drawBikeSprite(ctx, cx, cy) {
-  const sp = sprites.ready && sprites.list[0];
+// Draws any tier's sprite at a chosen scale. The results screen uses this to
+// end the run on the vehicle the player earned rather than just its name; the
+// fallback drawing below is the GrabBike, so tier 0 is the only guaranteed one.
+export function drawTierSprite(ctx, cx, cy, tier = 0, scale = 1) {
+  const sp = sprites.ready && sprites.list[tier];
   if (sp) {
-    const sh = SPRITE_H[0], sw = sh * sp.w / sp.h;
+    const sh = SPRITE_H[tier] * scale, sw = sh * sp.w / sp.h;
     ctx.drawImage(sp.canvas, cx - sw / 2, cy - sh / 2, sw, sh);
-    return;
+    return true;
   }
+  return false;
+}
+
+export function drawBikeSprite(ctx, cx, cy) {
+  if (drawTierSprite(ctx, cx, cy, 0)) return;
   const rr = (x, y, w, h, r) => {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
@@ -114,11 +122,14 @@ export function startGame(canvas, hud, questions, onFinish) {
   let boostUntil = -1, invulnUntil = -1, feedback = null;
   let magnetUntil = -1;                        // timed reward, not a tier perk
   let streak = 0, lastCoinAt = -9;             // R12: chained pickups raise the blip's pitch
+  // Banked for the results recap: a run the player can retell beats a bare number.
+  let coinsHit = 0, crashes = 0, bestStreak = 0;
   let particles = [];                          // R13/R18: coin sparkles + upgrade confetti
   let shakeUntil = -1;                         // R14: screen shake on crash
   let whiteUntil = -1, ringStart = -1;         // R18: upgrade flash + expanding ring
   let speedLines = null;                       // R19: streaks while boosted
   let labelDone = false;                       // R21: only the first '?' carries a label
+  let magnetExplained = false;                 // the aura gets named once, then it is learnt
 
   function moveLeft() { carLane = Math.max(0, carLane - 1); }
   function moveRight() { carLane = Math.min(2, carLane + 1); }
@@ -236,8 +247,8 @@ export function startGame(canvas, hud, questions, onFinish) {
     // than a hit: you have to find the right answer, not just enjoy being right.
     quiz.timerEl.className = 'q-verdict ' + (correct ? 'hit' : 'miss');
     quiz.timerEl.textContent = correct
-      ? 'Correct - level up!'
-      : (picked < 0 ? 'Time ran out' : 'Not quite');
+      ? 'Correct!'
+      : (picked < 0 ? 'Time ran out' : 'Nope');
     setTimeout(() => resume(correct, picked), correct ? 1100 : 2200);
   }
 
@@ -262,15 +273,18 @@ export function startGame(canvas, hud, questions, onFinish) {
       spawnBurst(laneCenter(carLane), carY(), 4, GOLD, 0.5);
       bump(hud.tier);                            //   HUD tier chip pulses
     }
-    // The magnet is not named here: it now comes with every correct answer, and
-    // the gold aura already shows it. This popup is one unwrapped line of 22px
-    // text on a phone-width canvas, so the upgrade keeps the space to itself.
+    // The upgrade keeps the main line to itself - it is one unwrapped line of
+    // 22px text on a phone-width canvas. The magnet gets a smaller second line,
+    // and only the first time: an unexplained gold aura is a mystery, but a
+    // caption on every correct answer is nagging. After one showing it is learnt.
     feedback = correct
       ? { text: atMax ? 'Exec bonus +' + TIER_BONUS + '!'
                       : 'Upgraded to ' + S.TIERS[tier] + '!',
-          until: elapsed + 1.5, good: true }
+          sub: magnetExplained ? null : 'Gold ring = grabbing next-lane coins',
+          until: elapsed + (magnetExplained ? 1.5 : 2.2), good: true }
       : { text: picked < 0 ? 'Time ran out - no change' : 'Nope',
           until: elapsed + 1.5, good: false };
+    if (correct) magnetExplained = true;
     invulnUntil = elapsed + 0.8;                 // grace while the road restarts
     quiz = null;
   }
@@ -321,9 +335,14 @@ export function startGame(canvas, hud, questions, onFinish) {
         || (elapsed < magnetUntil && Math.abs(c.lane - carLane) === 1);
       if (near && laneOk) {
         score = S.collectCoin(score);
-        streak = elapsed - lastCoinAt < 1.2 ? Math.min(streak + 1, 12) : 0;
+        // Counts the CURRENT coin, so the second quick coin in a row already
+        // rises a semitone. Resetting to 0 here made the ear wait until the
+        // third, which read as the reward being broken rather than earned.
+        streak = elapsed - lastCoinAt < 1.2 ? Math.min(streak + 1, 12) : 1;
         lastCoinAt = elapsed;
-        playCoin(Math.pow(1.0595, streak));    // R12: one semitone per streak step
+        coinsHit++;
+        if (streak > bestStreak) bestStreak = streak;
+        playCoin(Math.pow(1.0595, streak - 1));  // R12: one semitone per streak step
         spawnBurst(laneCenter(c.lane), c.y, 5, GOLD, 0.3);   // R13
         popScore('+' + COIN_POINTS, laneCenter(c.lane), c.y, true);
         return false;
@@ -336,6 +355,7 @@ export function startGame(canvas, hud, questions, onFinish) {
           && elapsed > invulnUntil) {
         score = S.hitObstacle(score);
         playCrash();
+        crashes++;
         streak = 0;                            // a crash kills the coin streak
         shakeUntil = elapsed + 0.25;           // R14
         flashCrash();                          // R15
@@ -661,6 +681,14 @@ export function startGame(canvas, hud, questions, onFinish) {
       ctx.strokeText(feedback.text, W / 2, H * 0.32);
       ctx.fillStyle = feedback.good ? '#7dffb0' : '#ffb0a8';
       ctx.fillText(feedback.text, W / 2, H * 0.32);
+      if (feedback.sub) {                      // the one-time magnet caption
+        ctx.font = 'bold 13px system-ui';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = 'rgba(4, 14, 9, 0.85)';
+        ctx.strokeText(feedback.sub, W / 2, H * 0.32 + 24);
+        ctx.fillStyle = GOLD;
+        ctx.fillText(feedback.sub, W / 2, H * 0.32 + 24);
+      }
     }
 
     if (shake > 0) ctx.restore();              // undo the crash jolt
@@ -676,7 +704,9 @@ export function startGame(canvas, hud, questions, onFinish) {
     canvas.removeEventListener('pointerdown', onPointer);
     window.removeEventListener('keydown', onKey);
     window.removeEventListener('resize', resize);
-    const handoff = () => onFinish(S.finalScore(score, tier), tier);
+    // Third arg is additive: callers that only want score and tier ignore it.
+    const handoff = () => onFinish(S.finalScore(score, tier), tier,
+                                   { coins: coinsHit, crashes, bestStreak });
     if (skipFlourish) { handoff(); return; }   // external stop: no ceremony
     playFinish();
     runFlourish(handoff);                      // R26: the run ends - it doesn't stop
