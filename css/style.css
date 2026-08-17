@@ -336,9 +336,14 @@ body.admin #gate-box .chequer { max-width: none; margin: -.4rem 0 .2rem; }
   display: none; margin-top: .8rem; padding: .9rem 1rem;
   border-radius: 12px; background: #0e1f16; border: 1px solid #1e4a33;
 }
-#opener-card .opener-head { font-weight: 800; color: #00b14f; }
+/* Slack IDs have no spaces, so a long one (firstname.middle.lastname) will not
+   wrap on its own and pushes out of the card - hence overflow-wrap. */
+#opener-card .opener-head {
+  font-weight: 800; color: #00b14f; font-size: 1.1rem; overflow-wrap: anywhere;
+}
 #opener-card p { margin: .25rem 0; }
-#opener-generic { color: #9db3a6; font-size: .9rem; }
+/* Tech Family + commute sit under the ID as a quieter sub-line. */
+#opener-prompt { color: #cde7d8; }
 #celebrate {
   position: fixed; inset: 0; z-index: 30; display: none;
   align-items: center; justify-content: center; pointer-events: none;

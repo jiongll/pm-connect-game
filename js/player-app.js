@@ -500,7 +500,7 @@ async function checkConnected() {
 }
 
 // R33 + R31: green flash, a big handshake, falling confetti, a chime - then
-// the game hands over to its real mission: the conversation.
+// the partner's commute, which is the thing worth talking about.
 function celebrate(mine, players) {
   playChime();
   const cel = $('celebrate');
@@ -515,10 +515,18 @@ function celebrate(mine, players) {
   cel.classList.add('show');
   setTimeout(() => { cel.classList.remove('show'); cel.innerHTML = ''; }, 1300);
 
-  // R31: show the PARTNER's commute - the difference that paired you is
-  // the talking point.
+  // R31: the card is now just WHO you paired with - their ID as the heading,
+  // then the two badges that had to differ for the pair to count. Two lines
+  // were cut from it: the "+N banked, now talk" headline (the bonus rows and
+  // the "Connected!" line above already show the points, so it said the same
+  // thing three times and then ordered people to talk) and a generic Tech
+  // Family question. What is left is the thing worth remembering after the
+  // handshake - a name to put to the face, and the difference that paired them.
   const partner = players.find(pl => String(pl.slack_id) === mine.claimed_match);
-  $('opener-head').textContent = '+' + MATCH_BONUS + ' banked. Now the real game: talk.';
-  $('opener-prompt').textContent = partner ? 'Their commute: ' + partner.bucket : '';
-  $('opener-card').style.display = 'block';
+  $('opener-head').textContent = partner ? '@' + partner.slack_id : '';
+  $('opener-prompt').textContent = partner
+    ? partner.tech_family + ' · ' + partner.bucket : '';
+  // Nothing else is left on the card, so with no partner row it would render as
+  // an empty bordered box on the results screen. Hide it instead.
+  $('opener-card').style.display = partner ? 'block' : 'none';
 }
