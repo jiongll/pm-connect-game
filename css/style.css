@@ -478,6 +478,8 @@ body.admin #bonus-billboard #bonus-rule {
 }
 #awards { max-width: 46rem; margin: 1.2rem auto 0; text-align: center; }
 .award { font-size: 1.35rem; color: #cde7d8; margin: .5rem 0; animation: tickerIn 300ms ease-out; }
+/* Footnote under the final board: quieter than an award, still projector-legible. */
+#board-legend { font-size: 1.05rem; color: #9db3a6; margin: .7rem 0 0; }
 #view-match .board { animation: boardIn 500ms ease-out; }
 @keyframes boardIn {
   from { opacity: 0; }

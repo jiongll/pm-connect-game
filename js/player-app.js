@@ -1,10 +1,12 @@
 import { GAME_NAME, TECH_FAMILIES, BUCKET_QUESTION, BUCKET_OPTIONS,
-         MATCH_BONUS, BONUS_ROUND_MS, LIVE_PUSH_MS } from './config.js';
+         MATCH_BONUS, BONUS_ROUND_MS, LIVE_PUSH_MS,
+         ROOKIE_BONUS, HOME_FAMILY } from './config.js';
 import { QUESTIONS } from './questions.js';
 import { TIERS } from './scoring.js';
 import { startGame, drawBikeSprite, drawTierSprite } from './game.js';
 import * as db from './db.js';
-import { bonusAwarded, validatePartner, connectionStats, buildLeaderboard } from './pairing.js';
+import { bonusAwarded, validatePartner, connectionStats, buildLeaderboard,
+         rookieAwarded } from './pairing.js';
 import { computePhase } from './phase.js';
 import { unlockAudio, playTick, playGo, playBonusSting, playChime } from './sound.js';
 
@@ -223,6 +225,7 @@ function showResultsShell() {
   $('final-tier').parentElement.style.display = 'none';   // no run, no tier line
   $('final-ride').style.display = 'none';                 // ...and no ride to show
   $('run-recap').style.display = 'none';                  // ...and nothing to recap
+  showRookieLine(me.score ?? 0);                          // the bonus still applies to a stored score
 }
 
 function setDigit(n) {                        // R9: pop, colour-coded 3-2-1
@@ -309,6 +312,21 @@ function showRecap(stats) {
   $('run-recap').textContent = bits.join(' · ');
 }
 
+// The big number stays the score you actually drove - that is the one the
+// database holds and the one the recap explains. The bonus is a separate
+// line that adds to it, phrased as a credit rather than a correction, so an
+// away-team player reads it as a welcome and not as a patronising asterisk.
+function showRookieLine(finalScore) {
+  const el = $('rookie-line');
+  if (!me || !rookieAwarded(me)) { el.textContent = ''; return; }
+  // Kept to two short clauses: the credit, then the number that lands on the
+  // board. The reason sits in the second sentence so the first line of a
+  // wrapped phone render already carries the good news.
+  el.textContent = '+' + ROOKIE_BONUS + ' away-team bonus → '
+    + (finalScore + ROOKIE_BONUS) + ' on the board. The quiz was '
+    + HOME_FAMILY + ' trivia.';
+}
+
 async function onGameFinish(finalScore, tier, stats) {
   stopLivePush();                               // no push may outlive the final write
   appState = 'results';
@@ -316,6 +334,7 @@ async function onGameFinish(finalScore, tier, stats) {
   $('final-score').textContent = finalScore;
   $('final-tier').textContent = TIERS[tier];
   paintFinalRide(tier);
+  showRookieLine(finalScore);
   showRecap(stats);
   if (solo) {
     $('submit-status').textContent = 'Solo mode - score not submitted.';
@@ -400,7 +419,9 @@ async function showRank() {
   try {
     const players = await db.getPlayers(me.session);
     if (players.length === 0) return;
-    const rows = buildLeaderboard(players, MATCH_BONUS);
+    // Bonuses applied explicitly: this runs on the results screen, after the
+    // heat, so the rank the player reads matches the projector's board.
+    const rows = buildLeaderboard(players, MATCH_BONUS, ROOKIE_BONUS, HOME_FAMILY);
     const mine = rows.find(r => r.slack_id === me.slack_id);
     if (!mine) return;
     const rank = rows.filter(r => r.display_score > mine.display_score).length + 1;  // ties share

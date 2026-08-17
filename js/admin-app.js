@@ -1,4 +1,4 @@
-import { HEAT_DURATION_MS, MATCH_BONUS } from './config.js';
+import { HEAT_DURATION_MS, MATCH_BONUS, ROOKIE_BONUS, HOME_FAMILY } from './config.js';
 import * as db from './db.js';
 import { bonusAwarded, buildLeaderboard, connectionStats } from './pairing.js';
 import { computePhase } from './phase.js';
@@ -49,6 +49,15 @@ async function boot() {
     'Find someone from a different Tech Family who travels to the office a different way. '
     + 'Swap Slack IDs - you both type them in. +' + MATCH_BONUS + ' each. '
     + 'You can also find people on Slack.';
+
+  // Both marks explained in one line, values read from config so the copy
+  // cannot drift from the bonuses actually being applied. Non-breaking
+  // spaces after each emoji and a wide gap between the two halves: plain
+  // spaces collapse in HTML and the marks end up glued to their words.
+  $('board-legend').textContent =
+    '\u{1F91D} connected, +' + MATCH_BONUS
+    + '  \u{1F680} outside ' + HOME_FAMILY + ', +' + ROOKIE_BONUS
+    + ' (the quiz is ' + HOME_FAMILY + ' trivia)';
 
   const playerUrl = location.href.replace(/admin\.html.*$/, '');
   try { new QRCode($('qr'), { text: playerUrl, width: 420, height: 420 }); }
@@ -222,12 +231,18 @@ function revealPress() {
   const now = Date.now();
   if (now - lastRevealPress < 350) revealStep = 5;
   else revealStep = Math.min(revealStep + 1, 5);
-  if (revealStep === 1 && buildLeaderboard(players, MATCH_BONUS).length <= 3) revealStep = 2;
+  // Only the row COUNT is read here, which no bonus changes - but the args
+  // stay in step with render() so the two can never disagree.
+  if (revealStep === 1
+      && buildLeaderboard(players, MATCH_BONUS, ROOKIE_BONUS).length <= 3) revealStep = 2;
   lastRevealPress = now;
   if (revealStep === 1) playChime();
   if (revealStep >= 2 && revealStep <= 4) playRevealSting(revealStep - 2);
   render();
 }
+
+// 'setup' counts as running: no heat has finished, so no bonus is due yet.
+function heatRunning() { return phase === 'setup' || phase === 'heat'; }
 
 function render() {
   renderJoinLine();
@@ -235,7 +250,12 @@ function render() {
     '<span class="chip">@' + esc(p.slack_id) +
     ' <small>' + esc(p.tech_family) + '</small></span>').join('');
 
-  const rows = buildLeaderboard(players, MATCH_BONUS);
+  // The rookie bonus lands at the END, not during the heat: mid-heat the
+  // board climbs on real coins only, so a driver never watches a rival sit
+  // 25 points ahead for a reason the big screen has not explained yet. Once
+  // the heat is done it applies for the rest of the night.
+  const rows = buildLeaderboard(players, MATCH_BONUS,
+                                heatRunning() ? 0 : ROOKIE_BONUS, HOME_FAMILY);
   const html = rows.map(rowHtml).join('');
   $('board-heat').innerHTML = html;
   $('board-match').innerHTML = html;
@@ -279,11 +299,15 @@ function medal(i) {
   return ['\u{1F451} ', '\u{1F948} ', '\u{1F949} '][i] || '';   // crown, silver, bronze
 }
 
+// Two marks, both explained by the legend under the board: handshake for a
+// made connection, rocket for the away-team head start. They read as earned
+// decoration rather than an asterisk on the score.
 function rowHtml(r, i) {
   return '<tr class="' + (r.connected ? 'connected' : '') + '">' +
     '<td>' + medal(i) + (i + 1) + '</td><td>@' + esc(r.slack_id) + '</td>' +
     '<td>' + esc(r.tech_family) + '</td>' +
-    '<td>' + r.display_score + (r.connected ? ' \u{1F91D}' : '') + '</td></tr>';
+    '<td>' + r.display_score + (r.connected ? ' \u{1F91D}' : '')
+           + (r.rookie ? ' \u{1F680}' : '') + '</td></tr>';
 }
 
 // R42/R43: pairs appear on the billboard as they land, each with a soft
@@ -339,6 +363,7 @@ function renderFinal(rows) {
   $('podium').style.display = (over && revealStep >= 2 && revealStep < 5) ? '' : 'none';
   $('awards').style.display = (over && revealStep >= 5) ? '' : 'none';
   $('board-match').parentElement.style.display = (over && revealStep >= 5) ? '' : 'none';
+  $('board-legend').style.display = (over && revealStep >= 5) ? '' : 'none';   // travels with its board
   if (!over) return;
 
   // Step 1 teases the chasing pack: places 4-10, podium withheld.

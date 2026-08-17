@@ -1,4 +1,4 @@
-import { MATCH_BONUS } from './config.js';
+import { MATCH_BONUS, ROOKIE_BONUS, HOME_FAMILY } from './config.js';
 
 // Bonus round: no assigned matches. Players find their own partner in the
 // room, swap Slack IDs, and both type the other's ID. A pair counts when
@@ -43,16 +43,35 @@ export function bonusAwarded(player, allPlayers) {
   return rulesOk(player, other);
 }
 
-export function buildLeaderboard(players, matchBonus = MATCH_BONUS) {
+// The quiz is Mobility product trivia, so everyone outside Mobility is
+// answering about someone else's product. This is the handicap: a flat
+// top-up for the away teams. A zero bonus turns it off entirely, so the
+// flag stays false and nothing gets labelled.
+export function rookieAwarded(player, rookieBonus = ROOKIE_BONUS, homeFamily = HOME_FAMILY) {
+  return rookieBonus > 0 && player.tech_family !== homeFamily;
+}
+
+// Both bonuses are display-only: the stored score is the raw run score, so
+// the board can be rebuilt from the database at any time without either
+// bonus being baked in. Deliberately NOT folded into scoring.finalScore -
+// the game engine shares that function with the mid-heat live board and
+// does not know the player's Tech Family, so a bonus there would leak onto
+// the big screen during the heat instead of landing at the end.
+export function buildLeaderboard(players, matchBonus = MATCH_BONUS,
+                                 rookieBonus = ROOKIE_BONUS, homeFamily = HOME_FAMILY) {
   return players
     .filter(p => p.score !== null && p.score !== undefined)
     .map(p => {
       const connected = bonusAwarded(p, players);
+      const rookie = rookieAwarded(p, rookieBonus, homeFamily);
       return {
         slack_id: p.slack_id,
         tech_family: p.tech_family,
         connected,
-        display_score: p.score + (connected ? matchBonus : 0),
+        rookie,
+        display_score: p.score
+                     + (connected ? matchBonus : 0)
+                     + (rookie ? rookieBonus : 0),
       };
     })
     .sort((x, y) => y.display_score - x.display_score

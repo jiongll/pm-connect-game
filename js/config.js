@@ -8,6 +8,12 @@ export const HEAT_DURATION_MS = 90_000;
 export const BONUS_ROUND_MS = 90_000;             // pairing window after the heat ends
 export const LIVE_PUSH_MS = 5_000;                // cosmetic mid-heat score push so the big screen climbs
 export const MATCH_BONUS = 35;
+// The quiz is Mobility product trivia, so everyone outside Mobility starts a
+// step behind. Each correct answer is worth ~23 pts once the tier speed-up and
+// the magnet knock-on are counted, so 25 is about one answer: enough to
+// acknowledge the gap, too small to hand anyone the win on its own.
+export const ROOKIE_BONUS = 25;
+export const HOME_FAMILY = 'Mobility';           // the family the trivia favours
 export const COIN_POINTS = 2;
 export const COLLISION_PENALTY = 5;
 export const TIER_BONUS = 10;                    // points per tier at game end

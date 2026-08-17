@@ -98,12 +98,53 @@ test('leaderboard adds bonus, sorts desc, excludes non-finishers', () => {
   const b = P('b', 'FS', 'Grab', { score: 50, claimed_match: 'a' });
   const c = P('c', 'GFB', 'Drive', { score: 120 });
   const late = P('late', 'ACE', 'Drive', { score: null });
-  const rows = buildLeaderboard([a, b, c, late], 35);
+  // Rookie bonus pinned off - this test is about the match bonus alone.
+  const rows = buildLeaderboard([a, b, c, late], 35, 0);
   assert.deepEqual(rows.map(r => r.slack_id), ['a', 'c', 'b']);   // 135, 120, 85
   assert.equal(rows[0].display_score, 135);
   assert.equal(rows[0].connected, true);
   assert.equal(rows[1].connected, false);
   assert.equal(rows.length, 3);
+});
+
+// The quiz is Mobility trivia, so everyone else gets a small top-up. It is a
+// display-layer bonus like the match bonus: the stored score stays untouched.
+test('rookie bonus goes to everyone outside the home family', () => {
+  const mob = P('mob', 'Mobility', 'Drive', { score: 100 });
+  const fs = P('fs', 'FS', 'Grab', { score: 100 });
+  const rows = buildLeaderboard([mob, fs], 35, 25, 'Mobility');
+  const byId = Object.fromEntries(rows.map(r => [r.slack_id, r]));
+  assert.equal(byId.mob.display_score, 100);      // home family, no top-up
+  assert.equal(byId.mob.rookie, false);
+  assert.equal(byId.fs.display_score, 125);       // 100 + 25
+  assert.equal(byId.fs.rookie, true);
+});
+
+test('rookie bonus stacks with the match bonus', () => {
+  const a = P('a', 'FS', 'Drive', { score: 100, claimed_match: 'b' });
+  const b = P('b', 'GFB', 'Grab', { score: 100, claimed_match: 'a' });
+  const rows = buildLeaderboard([a, b], 35, 25, 'Mobility');
+  // Both paired and both outside Mobility: 100 + 35 + 25.
+  assert.equal(rows[0].display_score, 160);
+  assert.equal(rows[1].display_score, 160);
+  assert.ok(rows.every(r => r.connected && r.rookie));
+});
+
+test('rookie bonus can change the ranking', () => {
+  const mob = P('mob', 'Mobility', 'Drive', { score: 110 });
+  const fs = P('fs', 'FS', 'Grab', { score: 100 });
+  // Without the bonus Mobility leads by 10; 25 is enough to overturn that.
+  assert.deepEqual(buildLeaderboard([mob, fs], 35, 0, 'Mobility').map(r => r.slack_id),
+                   ['mob', 'fs']);
+  assert.deepEqual(buildLeaderboard([mob, fs], 35, 25, 'Mobility').map(r => r.slack_id),
+                   ['fs', 'mob']);
+});
+
+test('rookie bonus of 0 disables it entirely', () => {
+  const fs = P('fs', 'FS', 'Grab', { score: 100 });
+  const [row] = buildLeaderboard([fs], 35, 0, 'Mobility');
+  assert.equal(row.display_score, 100);
+  assert.equal(row.rookie, false);         // nothing to label when nothing is added
 });
 
 test('connection stats count everyone as the base', () => {
