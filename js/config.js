@@ -44,8 +44,7 @@ export const TECH_FAMILIES = [
   'Other',
 ];
 
-// Options finalised from playtest feedback. Keys of OPENERS in
-// js/player-app.js must match these character for character.
+// Options finalised from playtest feedback.
 export const BUCKET_QUESTION = 'How do you commute to work?';
 export const BUCKET_OPTIONS = [
   'Grab',
