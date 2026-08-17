@@ -12,7 +12,7 @@
 
 ## Script
 
-You press TWO buttons all game: **Start the heat**, and once entries
+You press TWO buttons all game: **Start the match**, and once entries
 lock, **Reveal the podium**. Everything between them - the 90-second
 drive, the bonus round - runs on a shared clock, automatically.
 
@@ -21,12 +21,12 @@ Slack ID, Tech Family, one question. You have two minutes."
 (Watch the counter climb. Chase stragglers by name - it is on the screen.)
 
 **2:00** - "Locking the doors. 3... 2... 1..." then press **Start the
-heat**. Add: "Steer into the big gold ? coins - they pause your road for
+match**. Add: "Steer into the big gold ? coins - they pause your road for
 a bonus question... but not the clock. Correct answers upgrade your
 ride - GrabBike all the way up to Exec."
 Latecomers: they are swept into whatever stage is running - do not restart.
 
-**2:05-3:35** - The heat. Commentate the board as scores land. Call out
+**2:05-3:35** - The match. Commentate the board as scores land. Call out
 Tech Families, not just names. Everyone stops at the same moment - the
 clock runs even during quiz questions.
 
@@ -41,9 +41,10 @@ Commentate the connected counter as pairs land.
 
 **~5:05** - Entries lock and the big screen goes quiet: a **Reveal the
 podium** button appears. Give it a beat (the last scores land within
-seconds), then press it - or tap spacebar - once per place: 3rd... 2nd...
-1st. Milk each one. A final press brings up the full board and three
-award lines: read the Scenic Route Award with love, the Fastest fleet
+seconds), then press it - or tap spacebar. First press: the chasing pack
+(places 4-10) - "none of you made the podium... yet". Then one press per
+place: 3rd... 2nd... 1st. Milk each one. A final press brings up the
+full board and three award lines: read the Scenic Route Award with love, the Fastest fleet
 line as a challenge, and the room total as the closer ("X points, Y new
 cross-TF connections in 90 seconds"). Crown the winner: "drove well AND
 got off their chair." In a rush? Double-press reveals everything at once.

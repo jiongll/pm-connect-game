@@ -26,24 +26,24 @@
     <h1 id="admin-title">PM Connect - GrabRush!</h1>
     <button class="admin-btn ghost new-game">Start new game</button>
   </div>
+  <p class="tagline">Grab PM Grand Prix</p>
   <p id="admin-error" class="error"></p>
   <div id="setup-grid">
     <div>
       <div id="qr"></div>
       <span id="player-url"></span>
-      <p id="how-to-strip"></p>
     </div>
     <div>
       <p class="count-big"><span id="join-count">0</span><span id="join-label"> in the waiting room</span></p>
       <div id="join-list"></div>
-      <button id="start-heat" class="admin-btn" style="margin-top:1.6rem">Start the heat</button>
+      <button id="start-heat" class="admin-btn" style="margin-top:1.6rem">Start the match</button>
     </div>
   </div>
 </div>
 
 <div id="view-heat" class="admin-view">
   <div class="admin-head">
-    <h1>Heat in progress</h1>
+    <h1>Match in progress</h1>
     <span><span id="finished-count">0</span> on the board</span>
     <button class="admin-btn ghost new-game">Start new game</button>
   </div>
@@ -71,6 +71,10 @@
   <div id="reveal-bar">
     <button id="reveal-btn" class="admin-btn">Reveal the podium</button>
     <span id="reveal-hint">or press space &middot; double-press shows everything</span>
+  </div>
+  <div id="field">
+    <p id="field-title">The chasing pack</p>
+    <table class="board"><tbody id="board-field"></tbody></table>
   </div>
   <ol id="podium"></ol>
   <div id="awards"></div>

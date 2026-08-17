@@ -329,7 +329,7 @@ body.admin #gate-error { color: #ff7a7a; min-height: 1.2em; margin: 0; }
 }
 
 /* ── Delight pass: setup stage (R37, R38, R40) ──────────────────── */
-#how-to-strip { color: #9db3a6; margin-top: .8rem; font-size: 1.05rem; max-width: 340px; }
+#field-title { color: #9db3a6; font-size: 1.3rem; margin: 1.2rem 0 .6rem; }
 #join-count { display: inline-block; }        /* a transform needs a box */
 .bump { animation: bumpPulse 200ms ease-out; }
 @keyframes bumpPulse {

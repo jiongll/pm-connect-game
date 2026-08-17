@@ -225,10 +225,10 @@ export function startGame(canvas, hud, questions, onFinish) {
     feedback = correct
       ? { text: atMax ? 'Exec bonus +' + TIER_BONUS + '!'
                 : !S.tierHasMagnet(before) && S.tierHasMagnet(tier)
-                  ? 'Coin magnet on - side-lane coins now count'   // R20
+                  ? 'Magnet on! Coins beside you count too'   // R20
                   : 'Upgraded to ' + S.TIERS[tier] + '!',
           until: elapsed + 1.5, good: true }
-      : { text: picked < 0 ? 'Time ran out - no change' : 'Not quite - no change',
+      : { text: picked < 0 ? 'Time ran out - no change' : 'Nope',
           until: elapsed + 1.5, good: false };
     invulnUntil = elapsed + 0.8;                 // grace while the road restarts
     quiz = null;

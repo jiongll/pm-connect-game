@@ -2,7 +2,7 @@ import { HEAT_DURATION_MS, MATCH_BONUS } from './config.js';
 import * as db from './db.js';
 import { bonusAwarded, buildLeaderboard, connectionStats } from './pairing.js';
 import { computePhase } from './phase.js';
-import { unlockAudio, playPairDing, playRevealSting } from './sound.js';
+import { unlockAudio, playPairDing, playRevealSting, playChime } from './sound.js';
 
 const $ = id => document.getElementById(id);
 const ADMIN_TITLE = 'PM Connect - GrabRush!';
@@ -16,7 +16,7 @@ let lastJoinCount = 0;        // R37: pulse the big number when it grows
 let seenPairs = new Set();    // R42: canonical "a|b" keys already on the ticker
 let pairsPrimed = false;      // first paint fills the ticker silently (mid-game refresh)
 let nextDingAt = 0;           // R43: stacked pairs ding 300 ms apart, not at once
-let revealStep = 0;           // R44: 0 hidden, 1 third, 2 second, 3 first, 4 everything
+let revealStep = 0;           // R44: 0 hidden, 1 field (4th-10th), 2 third, 3 second, 4 first, 5 everything
 let podiumShown = 0;          // podium lines already inserted (append-only, so each animates once)
 let lastRevealPress = 0;
 
@@ -50,9 +50,6 @@ async function boot() {
     'Find someone from a different Tech Family who travels to the office a different way. '
     + 'Swap Slack IDs - you both type them in. +' + MATCH_BONUS + ' each. '
     + 'You can also find people on Slack.';
-  $('how-to-strip').textContent =       // R40: the projector teaches while the room queues
-    'Swipe lanes · Coins score · Gold ? = trivia · '
-    + 'Trivia upgrades your ride · After the heat: pair up for +' + MATCH_BONUS;
 
   const playerUrl = location.href.replace(/admin\.html.*$/, '');
   try { new QRCode($('qr'), { text: playerUrl, width: 300, height: 300 }); }
@@ -200,10 +197,10 @@ const modalConfirm = (title, line) => showModal(title, line);
 const modalAlert = (title, line) => showModal(title, line, { cancel: false, confirmLabel: 'OK' });
 
 async function startHeat() {
-  const ok = await modalConfirm('Start the heat', 'Start the heat for ' + players.length + ' players?');
+  const ok = await modalConfirm('Start the match', 'Start the match for ' + players.length + ' players?');
   if (!ok) return;
   try { await db.setGameStatus('started'); }
-  catch (err) { await modalAlert('Could not start the heat', err.message); }
+  catch (err) { await modalAlert('Could not start the match', err.message); }
 }
 
 // The reset. Bumps the session; every phone returns to the join screen.
@@ -217,16 +214,20 @@ async function newGame() {
 }
 
 // R44: the reveal. The board has been hidden since the heat ended, so there
-// is finally something to reveal. Each press (or space): 3rd, 2nd, 1st,
-// then the full board and the awards. A quick double-press skips to everything.
+// is finally something to reveal. Each press (or space): the chasing pack
+// (places 4-10), then 3rd, 2nd, 1st, then the full board and the awards.
+// A quick double-press skips to everything. With three drivers or fewer
+// there is no pack to tease, so the first press goes straight to 3rd.
 function revealPress() {
   if (phase !== 'over') return;
   unlockAudio();
   const now = Date.now();
-  if (now - lastRevealPress < 350) revealStep = 4;
-  else revealStep = Math.min(revealStep + 1, 4);
+  if (now - lastRevealPress < 350) revealStep = 5;
+  else revealStep = Math.min(revealStep + 1, 5);
+  if (revealStep === 1 && buildLeaderboard(players, MATCH_BONUS).length <= 3) revealStep = 2;
   lastRevealPress = now;
-  if (revealStep >= 1 && revealStep <= 3) playRevealSting(revealStep - 1);
+  if (revealStep === 1) playChime();
+  if (revealStep >= 2 && revealStep <= 4) playRevealSting(revealStep - 2);
   render();
 }
 
@@ -335,11 +336,15 @@ function queueDing() {
 function renderFinal(rows) {
   const over = phase === 'over';
   $('bonus-billboard').style.display = over ? 'none' : '';
-  $('reveal-bar').style.display = (over && revealStep < 4) ? '' : 'none';
-  $('podium').style.display = (over && revealStep >= 1 && revealStep < 4) ? '' : 'none';
-  $('awards').style.display = (over && revealStep >= 4) ? '' : 'none';
-  $('board-match').parentElement.style.display = (over && revealStep >= 4) ? '' : 'none';
+  $('reveal-bar').style.display = (over && revealStep < 5) ? '' : 'none';
+  $('field').style.display = (over && revealStep === 1) ? '' : 'none';
+  $('podium').style.display = (over && revealStep >= 2 && revealStep < 5) ? '' : 'none';
+  $('awards').style.display = (over && revealStep >= 5) ? '' : 'none';
+  $('board-match').parentElement.style.display = (over && revealStep >= 5) ? '' : 'none';
   if (!over) return;
+
+  // Step 1 teases the chasing pack: places 4-10, podium withheld.
+  $('board-field').innerHTML = rows.slice(3, 10).map((r, k) => rowHtml(r, k + 3)).join('');
 
   const podium = rows.slice(0, 3);
   const places = [                      // press order: 3rd, then 2nd, then 1st
@@ -347,7 +352,7 @@ function renderFinal(rows) {
     { idx: 1, cls: 'p2', label: '\u{1F948} 2nd' },
     { idx: 0, cls: 'p1', label: '\u{1F451} 1st' },
   ];
-  const want = Math.min(revealStep, 3);
+  const want = Math.min(Math.max(revealStep - 1, 0), 3);
   while (podiumShown < want) {
     const place = places[podiumShown];
     podiumShown += 1;
@@ -359,7 +364,7 @@ function renderFinal(rows) {
       + '<small>' + esc(r.tech_family) + '</small><b>' + r.display_score + '</b>';
     $('podium').appendChild(li);
   }
-  if (revealStep >= 4) $('awards').innerHTML = awardsHtml(rows);
+  if (revealStep >= 5) $('awards').innerHTML = awardsHtml(rows);
 }
 
 // R46/R47/R48: three award lines under the final board - warm, short, and

@@ -21,7 +21,7 @@ const TIPS = [
   'The gold ? coin freezes time for a trivia question.',
   'Correct answers upgrade your ride - better rides earn more.',
   'Crashes cost points, never the race. Keep driving.',
-  'After the heat: find a partner, both score +' + MATCH_BONUS + '.',
+  'After the match: find a partner, both score +' + MATCH_BONUS + '.',
 ];
 
 function leaveWaiting() {                     // kill the waiting-room life on countdown
