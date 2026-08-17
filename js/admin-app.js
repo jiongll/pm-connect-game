@@ -51,12 +51,15 @@ async function boot() {
     + 'You can also find people on Slack.';
 
   // Both marks explained in one line, values read from config so the copy
-  // cannot drift from the bonuses actually being applied. Non-breaking
-  // spaces after each emoji and a wide gap between the two halves: plain
-  // spaces collapse in HTML and the marks end up glued to their words.
+  // cannot drift from the bonuses actually being applied. The wording and the
+  // marks match the player-side bonus rows verbatim (renderBonusRows in
+  // player-app.js): both screens are read in the same moment, so one bonus must
+  // not carry two names. Non-breaking spaces after each emoji and a wide gap
+  // between the two halves: plain spaces collapse in HTML and the marks end up
+  // glued to their words.
   $('board-legend').textContent =
-    '\u{1F91D} connected, +' + MATCH_BONUS
-    + '  \u{1F680} outside ' + HOME_FAMILY + ', +' + ROOKIE_BONUS
+    '\u{1F91D} Paired successfully +' + MATCH_BONUS
+    + '  \u{1F49A} From non-' + HOME_FAMILY + ' TF +' + ROOKIE_BONUS
     + ' (the quiz is ' + HOME_FAMILY + ' trivia)';
 
   const playerUrl = location.href.replace(/admin\.html.*$/, '');
