@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   TIERS, collectCoin, hitObstacle, answerQuestion,
-  tierPoints, finalScore, tierSpeedMultiplier, tierHasMagnet,
+  tierPoints, finalScore, tierSpeedMultiplier,
 } from '../js/scoring.js';
 
 test('seven tiers in order, GrabBike to Exec', () => {
@@ -47,9 +47,5 @@ test('speed rises with tier', () => {
   assert.equal(tierSpeedMultiplier(0), 1);
 });
 
-test('coin magnet from Standard up', () => {
-  assert.equal(tierHasMagnet(0), false);
-  assert.equal(tierHasMagnet(1), false);
-  assert.equal(tierHasMagnet(2), true);
-  assert.equal(tierHasMagnet(6), true);
-});
+// The magnet is no longer a tier property - it is a timed window granted in
+// game.js on a correct answer, so there is nothing left in scoring.js to test.

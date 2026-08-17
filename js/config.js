@@ -12,7 +12,6 @@ export const COIN_POINTS = 2;
 export const COLLISION_PENALTY = 5;
 export const TIER_BONUS = 10;                    // points per tier at game end
 export const TIER_SPEED_STEP = 0.06;             // extra speed per tier (game feel)
-export const MAGNET_TIER = 2;                    // tier index that unlocks the coin magnet (2 = Standard on the seven-tier ladder)
 
 // Game feel - safe to tune between playtests
 export const BASE_SPEED = 340;        // road speed in px/s before tier multiplier
@@ -20,6 +19,10 @@ export const COIN_EVERY = 0.65;       // seconds between coin spawns
 export const OBSTACLE_EVERY = 1.6;    // seconds between cone spawns
 export const BOOST_MULTIPLIER = 1.4;  // speed boost after a correct answer
 export const BOOST_SECONDS = 2;       // seconds the boost lasts
+// The magnet is a reward for answering, not a permanent upgrade: a tier-based
+// magnet switched lane-changing off for the rest of the run, which removed the
+// only decision the player makes. Longer than the boost so it is worth having.
+export const MAGNET_SECONDS = 5;      // seconds the coin magnet lasts after a correct answer
 
 // Quiz (question coin) tuning
 export const QUIZ_COUNT = 6;          // question coins per heat

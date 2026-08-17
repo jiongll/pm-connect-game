@@ -134,7 +134,8 @@ label .id-field { margin-top: .35rem; }
   35%  { transform: scale(1.035); }
   100% { transform: scale(1); }
 }
-/* Says in words what the colours say, so it lands even if you looked away. */
+/* Short outcome word. The green row already says WHICH answer was right, so
+   this only names the result - and keeps a non-colour signal for the reveal. */
 .q-verdict {
   margin-top: .9rem; font-weight: 800; font-size: 1.05rem; min-height: 1.3em;
 }
@@ -143,10 +144,6 @@ label .id-field { margin-top: .35rem; }
 .q-timer {
   order: -1; color: #ffd76a; font-weight: 800;
   font-size: 1.05rem; margin-bottom: .8rem; min-height: 1.3em;
-}
-.q-head {
-  color: #F5A623; font-weight: 800; font-size: 1rem;
-  letter-spacing: .04em; text-transform: uppercase; margin-bottom: .3rem;
 }
 #canvas-wrap { flex: 1; position: relative; }
 #game-canvas { position: absolute; inset: 0; touch-action: none; }

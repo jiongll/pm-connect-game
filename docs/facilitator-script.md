@@ -22,8 +22,8 @@ Slack ID, Tech Family, one question. You have two minutes."
 
 **2:00** - "Locking the doors. 3... 2... 1..." then press **Start the
 match**. Add: "Steer into the big gold ? coins - they pause your road for
-a bonus question... but not the clock. Correct answers upgrade your
-ride - GrabBike all the way up to Exec."
+a question... but not the clock. Get it right and you upgrade your ride -
+GrabBike all the way up to Exec - plus a few seconds of coin magnet."
 Latecomers: they are swept into whatever stage is running - do not restart.
 
 **2:05-3:35** - The match. Commentate the board as scores land. Call out

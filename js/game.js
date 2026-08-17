@@ -1,6 +1,7 @@
 import { HEAT_DURATION_MS, TIER_BONUS, COIN_POINTS, COLLISION_PENALTY,
          BASE_SPEED, COIN_EVERY, OBSTACLE_EVERY,
-         BOOST_MULTIPLIER, BOOST_SECONDS, QUIZ_COUNT, QUIZ_SECONDS,
+         BOOST_MULTIPLIER, BOOST_SECONDS, MAGNET_SECONDS,
+         QUIZ_COUNT, QUIZ_SECONDS,
          QUIZ_FIRST_AT, QUIZ_LAST_AT } from './config.js';
 import * as S from './scoring.js';
 import { unlockAudio, playCoin, playCrash, playLevelUp, playFinish, playSoftTick } from './sound.js';
@@ -111,6 +112,7 @@ export function startGame(canvas, hud, questions, onFinish) {
   let dashOffset = 0, coinTimer = 0.4, obstacleTimer = 1.2;
   let nextQuiz = 0, qIndex = 0;
   let boostUntil = -1, invulnUntil = -1, feedback = null;
+  let magnetUntil = -1;                        // timed reward, not a tier perk
   let streak = 0, lastCoinAt = -9;             // R12: chained pickups raise the blip's pitch
   let particles = [];                          // R13/R18: coin sparkles + upgrade confetti
   let shakeUntil = -1;                         // R14: screen shake on crash
@@ -228,13 +230,14 @@ export function startGame(canvas, hud, questions, onFinish) {
       if (i !== quiz.q.correct && i !== picked) b.classList.add('faded');
     });
     if (hud.qbar) hud.qbar.style.transition = 'none';   // stop the drain mid-reveal
-    // Colour alone is easy to miss and unreadable to a colour-blind player, so
-    // name the outcome. A miss also needs longer on screen than a hit: you have
-    // to find the right answer, not just enjoy being right.
+    // Just the outcome - the green row already shows WHICH answer was right, so
+    // repeating it in text is noise. Kept short so it is a non-colour signal
+    // without competing with the highlight. A miss still needs longer on screen
+    // than a hit: you have to find the right answer, not just enjoy being right.
     quiz.timerEl.className = 'q-verdict ' + (correct ? 'hit' : 'miss');
     quiz.timerEl.textContent = correct
-      ? 'Correct - gear up!'
-      : 'The answer was: ' + quiz.q.options[quiz.q.correct];
+      ? 'Correct - level up!'
+      : (picked < 0 ? 'Time ran out' : 'Not quite');
     setTimeout(() => resume(correct, picked), correct ? 1100 : 2200);
   }
 
@@ -247,7 +250,11 @@ export function startGame(canvas, hud, questions, onFinish) {
     if (correct && atMax) score += TIER_BONUS;   // Exec: quizzes stay worth taking
     if (correct) playLevelUp();
     if (correct) popScore('+' + TIER_BONUS, laneCenter(carLane), carY() - 70, true);
-    if (correct) { boostUntil = elapsed + BOOST_SECONDS; seedSpeedLines(); }
+    if (correct) {
+      boostUntil = elapsed + BOOST_SECONDS;
+      magnetUntil = elapsed + MAGNET_SECONDS;    // a window, not a permanent perk
+      seedSpeedLines();
+    }
     if (tier > before) {                         // R18: the upgrade ceremony (~500 ms)
       whiteUntil = elapsed + 0.2;                //   silhouette flashes white
       ringStart = elapsed;                       //   green ring expands 20 -> 90 px
@@ -255,11 +262,12 @@ export function startGame(canvas, hud, questions, onFinish) {
       spawnBurst(laneCenter(carLane), carY(), 4, GOLD, 0.5);
       bump(hud.tier);                            //   HUD tier chip pulses
     }
+    // The magnet is not named here: it now comes with every correct answer, and
+    // the gold aura already shows it. This popup is one unwrapped line of 22px
+    // text on a phone-width canvas, so the upgrade keeps the space to itself.
     feedback = correct
       ? { text: atMax ? 'Exec bonus +' + TIER_BONUS + '!'
-                : !S.tierHasMagnet(before) && S.tierHasMagnet(tier)
-                  ? 'Magnet on! Coins beside you count too'   // R20
-                  : 'Upgraded to ' + S.TIERS[tier] + '!',
+                      : 'Upgraded to ' + S.TIERS[tier] + '!',
           until: elapsed + 1.5, good: true }
       : { text: picked < 0 ? 'Time ran out - no change' : 'Nope',
           until: elapsed + 1.5, good: false };
@@ -310,7 +318,7 @@ export function startGame(canvas, hud, questions, onFinish) {
     coins = coins.filter(c => {
       const near = Math.abs(c.y - carY()) < 46;
       const laneOk = c.lane === carLane
-        || (S.tierHasMagnet(tier) && Math.abs(c.lane - carLane) === 1);
+        || (elapsed < magnetUntil && Math.abs(c.lane - carLane) === 1);
       if (near && laneOk) {
         score = S.collectCoin(score);
         streak = elapsed - lastCoinAt < 1.2 ? Math.min(streak + 1, 12) : 0;
@@ -417,7 +425,36 @@ export function startGame(canvas, hud, questions, onFinish) {
     ctx.fillText('?', x, y + 1);
   }
 
+  // A timed power-up the player cannot see is as bad as a permanent one: they
+  // never learn what the reward was. The aura spans exactly the lanes the
+  // magnet reaches, and its radius shrinks with the remaining time, so the
+  // window is legible without adding a HUD element.
+  function drawMagnetAura(cx, cy) {
+    const left = magnetUntil - elapsed;
+    if (left <= 0) return;
+    const reach = laneWidth() * 1.5;
+    const r = reach * (0.75 + 0.25 * Math.min(1, left / MAGNET_SECONDS));
+    const pulse = 0.5 + 0.5 * Math.sin(elapsed * 9);
+    ctx.save();
+    // Weighted towards the RIM, not the middle: the middle is the player's own
+    // lane, which they already collect from. The neighbouring lanes are what
+    // the magnet actually buys, so that is where the tint has to be visible.
+    const g = ctx.createRadialGradient(cx, cy, r * 0.25, cx, cy, r);
+    g.addColorStop(0, 'rgba(255, 215, 106, .10)');
+    g.addColorStop(0.72, 'rgba(255, 215, 106, .30)');
+    g.addColorStop(1, 'rgba(255, 215, 106, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.35 + 0.4 * pulse;
+    ctx.strokeStyle = GOLD; ctx.lineWidth = 2;
+    ctx.setLineDash([10, 12]);
+    ctx.lineDashOffset = -elapsed * 40;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
   function drawVehicle(cx, cy) {               // the player, one drawing per tier
+    drawMagnetAura(cx, cy);                    // under the vehicle, so it reads as a field
     const flash = elapsed < invulnUntil && Math.floor(elapsed * 10) % 2 === 0;
     ctx.globalAlpha = flash ? 0.4 : 1;
     // The sprites are drawn from directly overhead, so a shadow offset below
