@@ -150,6 +150,8 @@ label .id-field { margin-top: .35rem; }
 #setup-grid { display: grid; grid-template-columns: 460px 1fr; gap: 2rem; align-items: start; }
 #qr { background: #fff; padding: 14px; border-radius: 12px; width: fit-content; }
 #player-url { color: #9db3a6; word-break: break-all; margin-top: .6rem; display: block; font-size: 1.05rem; }
+#go-link { color: #f2f5f3; display: block; margin-top: .5rem; font-size: 1.5rem; }
+#go-link b { color: #ffd76a; }
 #join-list { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
 .chip {
   background: #142019; border: 1px solid #24402f; border-radius: 999px;
