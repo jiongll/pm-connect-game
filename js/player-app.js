@@ -222,10 +222,11 @@ function showResultsShell() {
   appState = 'results';
   show('results');
   $('final-score').textContent = me.score ?? 0;
-  $('final-tier').parentElement.style.display = 'none';   // no run, no tier line
+  $('tier-line').style.display = 'none';                  // no run, no tier line
   $('final-ride').style.display = 'none';                 // ...and no ride to show
   $('run-recap').style.display = 'none';                  // ...and nothing to recap
-  showRookieLine(me.score ?? 0);                          // the bonus still applies to a stored score
+  renderBonusRows();                                      // the bonus still applies to a stored score
+  setScoreCollapsed(false);                               // enterBonus folds it, same as a fresh run
 }
 
 function setDigit(n) {                        // R9: pop, colour-coded 3-2-1
@@ -312,19 +313,52 @@ function showRecap(stats) {
   $('run-recap').textContent = bits.join(' · ');
 }
 
+// Declared above their first reader: the bonus helpers below consult
+// connectedDone, and a `let` after them would be a temporal dead zone.
+let bonusEntered = false, connectedDone = false;
+
 // The big number stays the score you actually drove - that is the one the
-// database holds and the one the recap explains. The bonus is a separate
-// line that adds to it, phrased as a credit rather than a correction, so an
-// away-team player reads it as a welcome and not as a patronising asterisk.
-function showRookieLine(finalScore) {
-  const el = $('rookie-line');
-  if (!me || !rookieAwarded(me)) { el.textContent = ''; return; }
-  // Kept to two short clauses: the credit, then the number that lands on the
-  // board. The reason sits in the second sentence so the first line of a
-  // wrapped phone render already carries the good news.
-  el.textContent = '+' + ROOKIE_BONUS + ' away-team bonus → '
-    + (finalScore + ROOKIE_BONUS) + ' on the board. The quiz was '
-    + HOME_FAMILY + ' trivia.';
+// database holds and the one the recap explains. Bonuses sit under it as a
+// stack of earned credits, one row each: mark, what you did, value. Same two
+// marks the projector uses, so a player looking up at the board recognises
+// their own row. Rows appear only when earned - an empty stack is simply
+// absent, never a row saying zero. Labels are fixed copy, so no escaping.
+function bonusTotal() {
+  return (me && me.claimed_match && connectedDone ? MATCH_BONUS : 0)
+       + (me && rookieAwarded(me) ? ROOKIE_BONUS : 0);
+}
+
+function renderBonusRows() {
+  const rows = [];
+  if (me && me.claimed_match && connectedDone) {
+    rows.push(['\u{1F91D}', 'Paired successfully', MATCH_BONUS]);
+  }
+  if (me && rookieAwarded(me)) {
+    rows.push(['\u{1F49A}', 'From non-' + HOME_FAMILY + ' TF', ROOKIE_BONUS]);
+  }
+  $('bonus-rows').innerHTML = rows.map(([mark, label, pts]) =>
+    '<span class="bonus-row"><b>' + mark + '</b> ' + label
+    + ' <i>+' + pts + '</i></span>').join('');
+}
+
+// The collapsed view: one line carrying the same total as the block above it,
+// so folding the detail away never costs the player information they need. It
+// is the tap target too, which is why it names what a tap reveals.
+function paintSlimLine() {
+  const bonus = bonusTotal();
+  const base = Number($('final-score').textContent) || 0;
+  $('score-slim').textContent = base + ' pts'
+    + (bonus ? ' + ' + bonus + ' bonus = ' + (base + bonus) : '')
+    + ' · tap for detail';
+}
+
+// Collapse when the bonus round starts, expand when it ends. The rank arrives
+// at the buzzer (showRank) and is the payoff, so state C re-expands on its own
+// rather than leaving the good news inside a folded panel.
+function setScoreCollapsed(collapsed) {
+  if (collapsed) paintSlimLine();
+  $('score-full').style.display = collapsed ? 'none' : '';
+  $('score-slim').style.display = collapsed ? '' : 'none';
 }
 
 async function onGameFinish(finalScore, tier, stats) {
@@ -334,8 +368,9 @@ async function onGameFinish(finalScore, tier, stats) {
   $('final-score').textContent = finalScore;
   $('final-tier').textContent = TIERS[tier];
   paintFinalRide(tier);
-  showRookieLine(finalScore);
+  renderBonusRows();
   showRecap(stats);
+  setScoreCollapsed(false);                     // state A: the run gets its moment
   if (solo) {
     $('submit-status').textContent = 'Solo mode - score not submitted.';
     $('match-block').style.display = 'none';    // no backend, no bonus round
@@ -343,15 +378,17 @@ async function onGameFinish(finalScore, tier, stats) {
   }
   $('submit-status').textContent = 'Sending your score...';
   const ok = await db.submitScore(me.id, finalScore);
+  // Success says nothing: the rank line at the buzzer is the proof, and a
+  // third "you are on the board" line was the noise. Failure stays loud -
+  // it is an instruction to the host, not a status.
   $('submit-status').textContent = ok
-    ? 'Score is on the leaderboard!'
-    : 'Could not reach the leaderboard - show this screen to the host.';
+    ? '' : 'Could not reach the leaderboard - show this screen to the host.';
+  $('submit-status').classList.toggle('warn', !ok);
   const state = await db.getGameState();        // shared anchor for the deadline
   const p = state ? computePhase(state.started_at, Date.now()) : null;
   enterBonus(p ? p.bonusRemainingMs : BONUS_ROUND_MS);
 }
 
-let bonusEntered = false, connectedDone = false;
 let deadline = 0, tickIv = null, pollIv = null;
 
 function enterBonus(remainingMs) {
@@ -374,6 +411,11 @@ function enterBonus(remainingMs) {
   $('claim-form').style.display = 'block';
   $('claim-btn').addEventListener('click', claim);
   if (me.claimed_match) lockClaim();            // refreshed mid-round with a claim already saved
+  // The score folds to one line so the partner task owns the screen. Behind the
+  // interstitial where there is one, so the fold is never seen mid-read.
+  setScoreCollapsed(true);
+  $('score-slim').addEventListener('click', () => setScoreCollapsed(false));
+  $('score-full').addEventListener('click', () => setScoreCollapsed(true));
   bonusTick();
   tickIv = setInterval(bonusTick, 250);
   pollIv = setInterval(checkConnected, 4000);
@@ -408,6 +450,7 @@ function bonusTick() {
       'No pair this time - your driving score stands. '
       + 'Go and say hello to someone anyway. No points required.';
   }
+  setScoreCollapsed(false);                     // eyes-up time is over: give the detail back
   showRank();                                   // R50: a rank is an identity, told at lock
   // Grace: a partner's claim may have landed right at the buzzer.
   setTimeout(() => { checkConnected().finally(() => clearInterval(pollIv)); }, 5000);
@@ -481,8 +524,14 @@ async function checkConnected() {
   const mine = players.find(pl => pl.id === me.id);
   if (mine && bonusAwarded(mine, players)) {
     connectedDone = true;
+    me.claimed_match = mine.claimed_match;       // local copy may predate the claim
     $('claim-status').textContent = 'Connected! +' + MATCH_BONUS + ' points for you both.';
     $('claim-form').style.display = 'none';
+    // The task is done: how-to-pair copy would only compete with the opener.
+    $('match-instructions').textContent = '';
+    $('badge-rule').style.display = 'none';
+    renderBonusRows();                           // the 🤝 row earns its place now
+    if ($('score-full').style.display === 'none') paintSlimLine();
     celebrate(mine, players);                   // R33 then R31
   }
 }

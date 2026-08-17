@@ -60,11 +60,17 @@
 
   <section id="screen-results" class="screen">
     <h2>Finished!</h2>
-    <p class="big-score"><span id="final-score">0</span> <span>pts</span></p>
-    <canvas id="final-ride"></canvas>
-    <p>You finished in the <b id="final-tier">GrabBike</b> tier.</p>
-    <p id="rookie-line"></p>
-    <p id="run-recap"></p>
+    <!-- Two views of the same result. #score-full earns a few seconds on its
+         own, then folds into #score-slim so the partner task owns the screen
+         while the bonus clock runs. Tapping either one swaps them back. -->
+    <div id="score-full">
+      <p class="big-score"><span id="final-score">0</span> <span>pts</span></p>
+      <canvas id="final-ride"></canvas>
+      <p id="tier-line"><b id="final-tier">GrabBike</b></p>
+      <div id="bonus-rows"></div>
+      <p id="run-recap"></p>
+    </div>
+    <p id="score-slim" title="Tap for the full breakdown"></p>
     <p id="submit-status"></p>
     <p id="rank-line"></p>
     <div id="match-block">

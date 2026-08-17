@@ -371,12 +371,39 @@ body.admin #gate-box .chequer { max-width: none; margin: -.4rem 0 .2rem; }
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.06); }
 }
-#rank-line { color: #ffd76a; font-weight: 800; font-size: 1.1rem; min-height: 1.2em; }
+/* No reserved height: the rank only exists after the buzzer, and an empty
+   1.2em would be a gap in the middle of the bonus round. */
+#rank-line { color: #ffd76a; font-weight: 800; font-size: 1.25rem; }
+#rank-line:empty { display: none; }
 
 /* Results: the ride you earned, then the run in three numbers. The canvas is
    block-level and full width because the sprite is centred inside it. */
 #final-ride { display: block; width: 100%; height: 120px; }
+#tier-line { color: #cde7d8; font-size: 1rem; letter-spacing: .04em;
+             text-transform: uppercase; margin: 0; }
 #run-recap { color: #9db3a6; font-size: .9rem; margin-top: .3rem; }
+#submit-status:empty { display: none; }
+#submit-status.warn { color: #ffd76a; font-weight: 700; }
+
+/* The bonus stack: one row per credit, each a grid so the marks, the labels
+   and the values line up down the column instead of ragging. Quieter than the
+   big score, louder than the recap - it is points you actually earned. */
+#bonus-rows { margin: .5rem 0 0; display: grid; gap: .25rem; }
+.bonus-row {
+  display: grid; grid-template-columns: 1.5em 1fr auto; gap: .4em;
+  align-items: baseline; font-size: 1rem; color: #cde7d8;
+}
+.bonus-row i { font-style: normal; font-weight: 800; color: #00b14f; }
+
+/* The collapsed score. Deliberately small and grey: during the bonus round the
+   partner card should win the eye, and this line is only a receipt. Hidden by
+   :empty rather than a blanket display:none - setScoreCollapsed clears the
+   inline style to reveal it, which a CSS `none` would silently override. */
+#score-slim {
+  color: #9db3a6; font-size: .95rem;
+  margin: .2rem 0 .4rem; cursor: pointer;
+}
+#score-slim:empty { display: none; }
 
 /* ── Delight pass: admin countdown mirror (R11) ─────────────────── */
 #admin-countdown {
