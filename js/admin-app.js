@@ -303,14 +303,16 @@ function medal(i) {
 }
 
 // Two marks, both explained by the legend under the board: handshake for a
-// made connection, rocket for the away-team head start. They read as earned
-// decoration rather than an asterisk on the score.
+// made connection, green heart for the away-team head start. They must stay in
+// step with that legend and with the player-side rows - the legend is the key to
+// this table, so a mark here that the legend does not show explains nothing.
+// They read as earned decoration rather than an asterisk on the score.
 function rowHtml(r, i) {
   return '<tr class="' + (r.connected ? 'connected' : '') + '">' +
     '<td>' + medal(i) + (i + 1) + '</td><td>@' + esc(r.slack_id) + '</td>' +
     '<td>' + esc(r.tech_family) + '</td>' +
     '<td>' + r.display_score + (r.connected ? ' \u{1F91D}' : '')
-           + (r.rookie ? ' \u{1F680}' : '') + '</td></tr>';
+           + (r.rookie ? ' \u{1F49A}' : '') + '</td></tr>';
 }
 
 // R42/R43: pairs appear on the billboard as they land, each with a soft
