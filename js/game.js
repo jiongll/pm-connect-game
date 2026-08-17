@@ -36,7 +36,14 @@ const CAR_STYLE = [null, null,
 
 // The GrabBike sprite, shared by the in-game drawing and the waiting-room
 // warm-up garage (R7/R8). Pure canvas - no game state, no closure.
+// Uses the sheet's bike when sliced; the drawn bike remains the fallback.
 export function drawBikeSprite(ctx, cx, cy) {
+  const sp = sprites.ready && sprites.list[0];
+  if (sp) {
+    const sh = SPRITE_H[0], sw = sh * sp.w / sp.h;
+    ctx.drawImage(sp.canvas, cx - sw / 2, cy - sh / 2, sw, sh);
+    return;
+  }
   const rr = (x, y, w, h, r) => {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
