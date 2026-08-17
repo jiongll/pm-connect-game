@@ -277,10 +277,12 @@ export function startGame(canvas, hud, questions, onFinish) {
     // 22px text on a phone-width canvas. The magnet gets a smaller second line,
     // and only the first time: an unexplained gold aura is a mystery, but a
     // caption on every correct answer is nagging. After one showing it is learnt.
+    // The duration comes from MAGNET_SECONDS so the copy cannot drift from it.
     feedback = correct
       ? { text: atMax ? 'Exec bonus +' + TIER_BONUS + '!'
                       : 'Upgraded to ' + S.TIERS[tier] + '!',
-          sub: magnetExplained ? null : 'Gold ring = grabbing next-lane coins',
+          sub: magnetExplained ? null
+                               : 'Coin magnet activated - ' + MAGNET_SECONDS + ' seconds',
           until: elapsed + (magnetExplained ? 1.5 : 2.2), good: true }
       : { text: picked < 0 ? 'Time ran out - no change' : 'Nope',
           until: elapsed + 1.5, good: false };
