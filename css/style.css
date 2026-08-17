@@ -388,9 +388,15 @@ body.admin #gate-box .chequer { max-width: none; margin: -.4rem 0 .2rem; }
    and the values line up down the column instead of ragging. Quieter than the
    big score, louder than the tier line - it is points you actually earned. */
 #bonus-rows { margin: .5rem 0 0; display: grid; gap: .25rem; }
+/* The amount reads as part of the sentence, so it sits right after the words:
+   "From non-Mobility TF +25". A grid with a 1fr label column pushed the number
+   to the far right edge - measured at over 1000px from the label it belonged to,
+   which read as an unrelated figure rather than the value of that bonus.
+   Flex keeps the mark, the label and the amount as one phrase; the whole row is
+   centred to match the score and tier above it. */
 .bonus-row {
-  display: grid; grid-template-columns: 1.5em 1fr auto; gap: .4em;
-  align-items: baseline; font-size: 1rem; color: #cde7d8;
+  display: flex; flex-wrap: wrap; justify-content: center;
+  align-items: baseline; gap: .4em; font-size: 1rem; color: #cde7d8;
 }
 .bonus-row i { font-style: normal; font-weight: 800; color: #00b14f; }
 
@@ -476,13 +482,15 @@ body.admin #bonus-billboard #bonus-rule {
 #podium li b { display: block; margin-top: .35rem; color: #ffd76a; font-size: 1.8rem; }
 #podium li.p2 { order: 1; padding-bottom: 3rem; border-color: rgba(205, 231, 216, .5); }
 #podium li.p1 {
-  order: 2; color: #ffd76a; font-size: 1.9rem; padding-bottom: 4.8rem;
+  order: 3; color: #ffd76a; font-size: 1.9rem; padding-bottom: 4.8rem;
   border-color: rgba(255, 215, 106, .6);
   box-shadow: 0 -10px 44px rgba(255, 215, 106, .12);
   animation: podiumIn 450ms ease-out backwards, goldFlash 900ms ease-out;
 }
 #podium li.p1 b { font-size: 2.2rem; }
-#podium li.p3 { order: 3; border-color: rgba(222, 148, 90, .55); }
+/* order 2 is the trophy art, so 1st takes 3 and 3rd place moves out to 4 - the
+   art has to sit right beside the winner, not at the end of the row. */
+#podium li.p3 { order: 4; border-color: rgba(222, 148, 90, .55); }
 @keyframes podiumIn {
   from { transform: translateY(18px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
@@ -492,6 +500,50 @@ body.admin #bonus-billboard #bonus-rule {
   25% { background: rgba(255, 215, 106, .35); }
   100% { background: rgba(255, 215, 106, 0); }
 }
+/* The trophy art is a child of the podium row itself, ordered to sit directly
+   beside the winner's tile: 2nd (1), art (2), winner (3), 3rd (4). It was first
+   placed outside the row, which looked fine in the numbers but put it at the far
+   end - beside 3rd place, 221px clear of the champion it belongs to. Order is the
+   only thing that seats it next to the winner, because the winner's tile is in
+   the middle of the podium, not at either end. */
+#podium-stage { display: block; }   /* wrapper only - #podium does the layout */
+#podium-art {
+  order: 2;                                      /* 2nd (1), art (2), winner (3), 3rd (4) */
+  /* A fixed height, because both relative rulers failed here: a width percentage
+     measured a fit-content parent and collapsed the figure to 0.75x the tile, and
+     a height percentage against an auto-height flex parent resolved to 70% rather
+     than the value asked for. The winner's tile sizes itself from its own text,
+     so it lands around 260-300px depending on name length; 20rem stands the
+     figure just above that in every case - present without towering. width:auto
+     plus the intrinsic ratio keep it undistorted. */
+  height: 20rem; width: auto; flex: 0 0 auto; align-self: flex-end;
+  object-fit: contain;                           /* never squash the figure */
+  /* Pull in against the row's 1.2rem gap so the figure reads as standing beside
+     the winner rather than floating in its own column. Tighter on the right,
+     which is the side the winner's tile is on. */
+  margin: 0 -1.2rem 0 -.6rem;
+  filter: drop-shadow(0 10px 30px rgba(255, 215, 106, .18));
+  animation: artIn 600ms cubic-bezier(.2, .9, .3, 1.2) backwards;
+}
+#podium-art[hidden] { display: none; }           /* beat any later display rule */
+/* Slides in from the left, which is the outer side - the figure walks in towards
+   the winner rather than away from them. */
+@keyframes artIn {
+  from { transform: translateX(-28px) scale(.9); opacity: 0; }
+  to { transform: translateX(0) scale(1); opacity: 1; }
+}
+/* Narrow screens: three tiles plus a figure cannot share one row, so let the row
+   wrap and give the art the full width below the tiles. Order 2 would strand it
+   between 2nd and the winner once wrapped, so it goes last. */
+@media (max-width: 900px) {
+  #podium { flex-wrap: wrap; }
+  /* No flex-basis:100% here - it stretched the img BOX to the full row width
+     (measured 358x224, aspect 1.598 against the picture's own 0.985), so the
+     figure sat letterboxed in dead space. The row already wraps; auto side
+     margins centre it at its intrinsic width. */
+  #podium-art { order: 5; height: 14rem; margin: .6rem auto 0; }
+}
+
 #awards { max-width: 46rem; margin: 1.2rem auto 0; text-align: center; }
 .award { font-size: 1.35rem; color: #cde7d8; margin: .5rem 0; animation: tickerIn 300ms ease-out; }
 /* Footnote under the final board: quieter than an award, still projector-legible. */

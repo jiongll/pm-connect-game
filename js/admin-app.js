@@ -103,7 +103,13 @@ function applyState(state) {
 function setPhase(p) {
   if (phase === p) return;
   phase = p;
-  if (p !== 'over') { revealStep = 0; podiumShown = 0; $('podium').innerHTML = ''; }
+  // Clear the tiles only - the trophy art is a permanent child of #podium (it is
+  // ordered to sit beside the winner), so innerHTML='' here would delete it and
+  // the next reveal would have no art at all.
+  if (p !== 'over') {
+    revealStep = 0; podiumShown = 0;
+    for (const li of [...$('podium').querySelectorAll('li')]) li.remove();
+  }
   render();
 }
 
@@ -364,7 +370,12 @@ function renderFinal(rows) {
   $('bonus-billboard').style.display = over ? 'none' : '';
   $('reveal-bar').style.display = (over && revealStep < 5) ? '' : 'none';
   $('field').style.display = (over && revealStep === 1) ? '' : 'none';
-  $('podium').style.display = (over && revealStep >= 2 && revealStep < 5) ? '' : 'none';
+  $('podium-stage').style.display = (over && revealStep >= 2 && revealStep < 5) ? '' : 'none';
+  // The trophy art belongs to the winner, so it arrives on the press that
+  // reveals 1st place - not with 3rd and 2nd, where it would give away who is
+  // still to come. `hidden` rather than display so the CSS keeps one source of
+  // truth for the layout.
+  $('podium-art').hidden = !(over && revealStep >= 4);
   $('awards').style.display = (over && revealStep >= 5) ? '' : 'none';
   $('board-match').parentElement.style.display = (over && revealStep >= 5) ? '' : 'none';
   $('board-legend').style.display = (over && revealStep >= 5) ? '' : 'none';   // travels with its board
