@@ -113,7 +113,15 @@ async function init() {
       }
     } catch { localStorage.removeItem('grabrush_player_id'); }
   }
-  if (me) enterWaiting();
+  if (me) { enterWaiting(); return; }
+
+  // Nobody restored, so this is a fresh arrival. If the match is already
+  // running, close the grid on sight instead of showing a form that will be
+  // rejected on tap. A failed read leaves the form open - join() checks again.
+  try {
+    const state = await db.getGameState();
+    if (state && state.status === 'started') lockGridClosed();
+  } catch { /* offline or unreachable - join() is the second gate */ }
 }
 
 async function join() {
@@ -125,6 +133,15 @@ async function join() {
   }
   $('join-btn').disabled = true;
   try {
+    // The grid closes at the start. Checked here, at the moment of the tap,
+    // rather than only on page load - someone can sit on this form for
+    // minutes while the host starts the match. Returning players are
+    // unaffected: they are restored via me in init() and never reach join().
+    const state = await db.getGameState();
+    if (state && state.status === 'started') {
+      lockGridClosed();
+      return;
+    }
     me = await db.joinGame($('slack-id').value, $('tech-family').value, $('bucket').value);
     localStorage.setItem('grabrush_player_id', me.id);
     enterWaiting();
@@ -133,6 +150,19 @@ async function join() {
   } finally {
     $('join-btn').disabled = false;
   }
+}
+
+// The match is already running and this person is not in it. Close the form
+// rather than leaving a button that cannot work, and tell them what to do -
+// the host can reopen the grid with "Start new game".
+function lockGridClosed() {
+  for (const el of $('screen-entry').querySelectorAll('label, #join-btn')) {
+    el.style.display = 'none';
+  }
+  $('entry-error').classList.add('grid-closed');
+  $('entry-error').textContent =
+    'This race has already started - the grid is closed. Hang on for the next one, '
+    + 'and rejoin when the host resets the game.';
 }
 
 function enterWaiting() {

@@ -52,8 +52,7 @@ async function boot() {
 
   const playerUrl = location.href.replace(/admin\.html.*$/, '');
   try { new QRCode($('qr'), { text: playerUrl, width: 420, height: 420 }); }
-  catch { /* the plain URL below is the fallback */ }
-  $('player-url').textContent = playerUrl;
+  catch { /* go/rush below is the fallback if the QR library fails */ }
 
   const state = await db.getGameState();
   if (!state) {
