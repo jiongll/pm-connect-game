@@ -114,8 +114,32 @@ label .id-field { margin-top: .35rem; }
   background: #131a16; color: #f2f5f3;
 }
 .q-opt:disabled { opacity: .92; }
-.q-opt.right { background: #00b14f; border-color: #00b14f; color: #04140b; }
-.q-opt.wrong { background: #5b1f18; border-color: #a03328; color: #ffd9d3; }
+/* On a wrong pick the player has half a second to find the right answer among
+   four options, so the reveal cannot be colour alone: the correct row keeps a
+   full-strength green, gets a glow and a tick, and pulses twice to pull the
+   eye. The options not in play fade back so only two rows compete. */
+.q-opt.right {
+  background: #00b14f; border-color: #6bffa8; color: #04140b;
+  opacity: 1; box-shadow: 0 0 0 3px rgba(0, 177, 79, .35), 0 6px 20px rgba(0, 177, 79, .3);
+  animation: rightPulse 620ms ease-out 2;
+}
+.q-opt.right::after { content: ' ✓'; font-weight: 900; }
+.q-opt.wrong {
+  background: #5b1f18; border-color: #a03328; color: #ffd9d3; opacity: 1;
+}
+.q-opt.wrong::after { content: ' ✕'; font-weight: 900; }
+.q-opt.faded:disabled { opacity: .34; }
+@keyframes rightPulse {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+/* Says in words what the colours say, so it lands even if you looked away. */
+.q-verdict {
+  margin-top: .9rem; font-weight: 800; font-size: 1.05rem; min-height: 1.3em;
+}
+.q-verdict.miss { color: #ffd76a; }
+.q-verdict.hit { color: #00b14f; }
 .q-timer {
   order: -1; color: #ffd76a; font-weight: 800;
   font-size: 1.05rem; margin-bottom: .8rem; min-height: 1.3em;

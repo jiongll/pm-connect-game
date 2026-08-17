@@ -184,12 +184,15 @@ export function startGame(canvas, hud, questions, onFinish) {
       hud.options.appendChild(b);
       return b;
     });
-    let timerEl = hud.banner.querySelector('.q-timer');
+    // Found by id, not by class: settle() swaps this element's class to show the
+    // verdict, so a class lookup would miss it and append a duplicate each round.
+    let timerEl = hud.banner.querySelector('#q-timer');
     if (!timerEl) {
       timerEl = document.createElement('p');
-      timerEl.className = 'q-timer';
+      timerEl.id = 'q-timer';
       hud.banner.appendChild(timerEl);
     }
+    timerEl.className = 'q-timer';               // clear last round's verdict
     let secondsLeft = QUIZ_SECONDS;
     timerEl.textContent = secondsLeft + 's to answer';
     quiz = {
@@ -219,7 +222,20 @@ export function startGame(canvas, hud, questions, onFinish) {
     const correct = picked === quiz.q.correct;
     quiz.btns[quiz.q.correct].classList.add('right');
     if (!correct && picked >= 0) quiz.btns[picked].classList.add('wrong');
-    setTimeout(() => resume(correct, picked), 900);  // beat to read the reveal
+    // Fade the options that were neither picked nor correct, so on a miss only
+    // two rows compete for the eye and the green one is unmistakable.
+    quiz.btns.forEach((b, i) => {
+      if (i !== quiz.q.correct && i !== picked) b.classList.add('faded');
+    });
+    if (hud.qbar) hud.qbar.style.transition = 'none';   // stop the drain mid-reveal
+    // Colour alone is easy to miss and unreadable to a colour-blind player, so
+    // name the outcome. A miss also needs longer on screen than a hit: you have
+    // to find the right answer, not just enjoy being right.
+    quiz.timerEl.className = 'q-verdict ' + (correct ? 'hit' : 'miss');
+    quiz.timerEl.textContent = correct
+      ? 'Correct - gear up!'
+      : 'The answer was: ' + quiz.q.options[quiz.q.correct];
+    setTimeout(() => resume(correct, picked), correct ? 1100 : 2200);
   }
 
   function resume(correct, picked) {
