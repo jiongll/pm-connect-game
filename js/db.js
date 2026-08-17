@@ -68,6 +68,16 @@ export async function submitScore(playerId, score) {
   return false;
 }
 
+// Cosmetic mid-game push so the big screen climbs during the heat. Deliberately
+// NOT the same as submitScore: one attempt, no retry, never awaited by the
+// caller. A failure is harmless - the board stays one tick stale and the
+// authoritative submitScore at the finish still lands. No retry is the point:
+// a queued retry could land AFTER the final write and pin a stale score.
+export function pushLiveScore(playerId, score) {
+  client.from('players').update({ score }).eq('id', playerId)
+    .then(() => {}, () => {});               // swallow both paths - best effort
+}
+
 export async function claimMatch(playerId, claimedSlackId) {
   const claimed = normaliseSlackId(claimedSlackId);
   if (!claimed) throw new Error('Type their Slack ID first.');

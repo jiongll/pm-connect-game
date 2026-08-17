@@ -1,5 +1,5 @@
 import { GAME_NAME, TECH_FAMILIES, BUCKET_QUESTION, BUCKET_OPTIONS,
-         MATCH_BONUS, BONUS_ROUND_MS } from './config.js';
+         MATCH_BONUS, BONUS_ROUND_MS, LIVE_PUSH_MS } from './config.js';
 import { QUESTIONS } from './questions.js';
 import { TIERS } from './scoring.js';
 import { startGame, drawBikeSprite } from './game.js';
@@ -216,18 +216,31 @@ function beginCountdown() {
   }, 1000);
 }
 
+let liveIv = null;
+
 function play() {
   appState = 'playing';
   show('game');
   $('hud-name').textContent = '@' + (me ? me.slack_id : 'you');
-  startGame($('game-canvas'),
+  const run = startGame($('game-canvas'),
     { score: $('hud-score'), tier: $('hud-tier'), time: $('hud-time'),
       banner: $('question-banner'), question: $('q-text'), options: $('q-options'),
       flash: $('crash-flash'), qbar: $('q-bar') },
     QUESTIONS, onGameFinish);
+  if (solo || !me) return;                      // no backend, nothing to push
+  liveIv = setInterval(() => {                  // LIVE_PUSH_MS: board climbs mid-heat
+    const s = run.liveScore();                  // null once the run has finished
+    if (s === null) { stopLivePush(); return; }
+    db.pushLiveScore(me.id, s);                 // best effort, not awaited
+  }, LIVE_PUSH_MS);
+}
+
+function stopLivePush() {
+  if (liveIv) { clearInterval(liveIv); liveIv = null; }
 }
 
 async function onGameFinish(finalScore, tier) {
+  stopLivePush();                               // no push may outlive the final write
   appState = 'results';
   show('results');
   $('final-score').textContent = finalScore;

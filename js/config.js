@@ -6,6 +6,7 @@ export const SUPABASE_ANON_KEY = 'sb_publishable_UNLOsWOIzPPldtToO5fhJA_Y8ZEN9vW
 export const GAME_NAME = 'Grab Rush';            // PLACEHOLDER name
 export const HEAT_DURATION_MS = 90_000;
 export const BONUS_ROUND_MS = 90_000;             // pairing window after the heat ends
+export const LIVE_PUSH_MS = 5_000;                // cosmetic mid-heat score push so the big screen climbs
 export const MATCH_BONUS = 35;
 export const COIN_POINTS = 2;
 export const COLLISION_PENALTY = 5;

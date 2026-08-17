@@ -685,5 +685,11 @@ export function startGame(canvas, hud, questions, onFinish) {
   }
 
   raf = requestAnimationFrame(frame);
-  return { stop: () => end(true) };            // external stops skip the ceremony
+  // liveScore reports the same figure the finish handler submits, so a mid-game
+  // board and the final leaderboard can never disagree. null once finished, so
+  // the caller stops pushing before submitScore runs.
+  return {
+    stop: () => end(true),                     // external stops skip the ceremony
+    liveScore: () => finished ? null : S.finalScore(score, tier),
+  };
 }
