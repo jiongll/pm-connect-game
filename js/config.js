@@ -52,6 +52,6 @@ export const BUCKET_OPTIONS = [
   'Ride a motorbike',
   'Ride a bicycle',
   'Walk',
-  'Train / Bus',
+  'Take the train/bus',
   'Get a lift',
 ];

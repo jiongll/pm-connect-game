@@ -27,6 +27,7 @@ label .id-field { margin-top: .35rem; }
   flex: 1; margin: 0; border: 0; background: transparent; padding-left: .3rem;
 }
 .id-field input:focus { outline: none; }
+.id-field input:disabled { opacity: .55; }
 .primary {
   display: block; width: 100%; margin-top: 1.2rem; padding: .95rem;
   font-size: 1.05rem; font-weight: 700; border: 0; border-radius: 12px;
@@ -369,8 +370,6 @@ body.admin #bonus-billboard #bonus-rule {
   from { transform: translateY(-8px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
-#admin-remote-line { color: #9db3a6; margin-top: 1.2rem; font-size: 1.15rem; }
-#admin-remote-line b { color: #cde7d8; }
 
 /* ── Delight pass: podium reveal + awards (R44-R48) ─────────────── */
 #reveal-bar { text-align: center; padding: 3rem 0 1rem; }

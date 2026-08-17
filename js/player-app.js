@@ -93,7 +93,7 @@ init();
 async function init() {
   document.title = GAME_NAME;
   $('game-title').textContent = GAME_NAME;
-  addPlaceholder($('tech-family'), 'Pick your family...');
+  addPlaceholder($('tech-family'), 'Pick your Tech Family');
   for (const tf of TECH_FAMILIES) $('tech-family').add(new Option(tf, tf));
   $('bucket-label').textContent = BUCKET_QUESTION;
   addPlaceholder($('bucket'), 'Pick one...');
@@ -270,6 +270,7 @@ function enterBonus(remainingMs) {
     + 'Tip: you can also find someone on Slack.';
   $('claim-form').style.display = 'block';
   $('claim-btn').addEventListener('click', claim);
+  if (me.claimed_match) lockClaim();            // refreshed mid-round with a claim already saved
   bonusTick();
   tickIv = setInterval(bonusTick, 250);
   pollIv = setInterval(checkConnected, 4000);
@@ -346,13 +347,22 @@ async function claim() {
     if (!verdict.ok) { $('claim-status').textContent = verdict.reason; return; }
     await db.claimMatch(me.id, other.slack_id);
     me = { ...me, claimed_match: other.slack_id };
-    $('claim-status').textContent = 'Saved. Now make sure they type YOUR ID too.';
+    lockClaim();
     checkConnected();
   } catch (err) {
     $('claim-status').textContent = err.message;
   } finally {
-    $('claim-btn').disabled = false;
+    $('claim-btn').disabled = !!me.claimed_match;   // stay frozen after a saved claim
   }
+}
+
+// One claim only: once saved, the cell freezes - no swapping partners, no
+// accidental re-entry wiping a good claim.
+function lockClaim() {
+  $('claim-input').value = me.claimed_match;
+  $('claim-input').disabled = true;
+  $('claim-btn').disabled = true;
+  $('claim-status').textContent = 'Saved. Now make sure they type YOUR ID too.';
 }
 
 async function checkConnected() {
