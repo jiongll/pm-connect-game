@@ -1,6 +1,7 @@
 import { HEAT_DURATION_MS, TIER_BONUS, COIN_POINTS, COLLISION_PENALTY,
          BASE_SPEED, COIN_EVERY, OBSTACLE_EVERY,
          BOOST_MULTIPLIER, BOOST_SECONDS, MAGNET_SECONDS, MAGNET_PULL,
+         GRIP_WINDOW,
          QUIZ_COUNT, QUIZ_SECONDS,
          QUIZ_FIRST_AT, QUIZ_LAST_AT } from './config.js';
 import * as S from './scoring.js';
@@ -98,10 +99,12 @@ export function startGame(canvas, hud, questions, onFinish) {
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     // A magnet-pulled coin holds an absolute x, which the new road width would
-    // make meaningless - dropping it snaps the coin back to its lane centre.
-    // Gated on coinsLive because the first resize() below runs while `coins`
-    // is still in its dead zone, where even reading it throws.
-    if (coinsLive) for (const c of coins) delete c.x;
+    // make meaningless - dropping it snaps the coin back to its lane centre, and
+    // releasing the grip lets it fall normally again rather than hover at a
+    // height that no longer matches the car. Gated on coinsLive because the
+    // first resize() below runs while `coins` is still in its dead zone, where
+    // even reading it throws.
+    if (coinsLive) for (const c of coins) { delete c.x; delete c.grip; }
   }
   let coinsLive = false;                       // set once `coins` is initialised
   resize();
@@ -328,24 +331,33 @@ export function startGame(canvas, hud, questions, onFinish) {
       nextQuiz++;
     }
 
-    for (const c of coins) c.y += dy;
+    // A gripped coin stops travelling down the road. Everything else scrolls.
+    for (const c of coins) if (!c.grip) c.y += dy;
     for (const o of obstacles) o.y += dy;
 
-    // The magnet pulls, it does not teleport. A coin one lane over eases toward
-    // the car's lane centre while the field is up. The rate is deliberately
-    // brisk: a coin only sits inside the collect window for ~9 frames at top
-    // speed (Exec tier, boosted), so a slower pull would let coins sail past
-    // uncollected on a phone that drops frames - the magnet would read as a
-    // penalty. At MAGNET_PULL the coin arrives in 3 frames at 60fps and 1 at
-    // 30fps, still visible travel, with margin to spare. It keeps its own x
-    // afterwards, so if the magnet expires mid-flight the coin just stops.
+    // The magnet is a sideways yank, not a curve. When a coin in the lane
+    // immediately left or right draws level with the car, the field grips it:
+    // from that frame it holds its y and slides straight across into the
+    // bonnet. Letting it keep falling while it drifted across read as the coin
+    // sailing past on a diagonal - which is the opposite of being sucked in.
+    //
+    // Grip starts a little before dead level (GRIP_WINDOW > the 46px collect
+    // window) so the slide has room to be seen: about 130-170ms at any frame
+    // rate. A gripped coin keeps its grip even if the magnet expires mid-slide -
+    // stranding it mid-air would look like a bug.
     if (elapsed < magnetUntil) {
-      const target = laneCenter(carLane);
       for (const c of coins) {
+        if (c.grip) continue;
         if (Math.abs(c.lane - carLane) !== 1) continue;
-        if (c.x === undefined) c.x = laneCenter(c.lane);
-        c.x += (target - c.x) * Math.min(1, dt * MAGNET_PULL);
+        if (Math.abs(c.y - carY()) > GRIP_WINDOW) continue;
+        c.grip = true;
+        c.x = laneCenter(c.lane);                 // start the slide from its lane
       }
+    }
+    for (const c of coins) {
+      if (!c.grip) continue;
+      const target = laneCenter(carLane);
+      c.x += (target - c.x) * Math.min(1, dt * MAGNET_PULL);
     }
     if (quizCoin) quizCoin.y += dy;
     if (speedLines) {
@@ -356,15 +368,16 @@ export function startGame(canvas, hud, questions, onFinish) {
     }
 
     coins = coins.filter(c => {
-      const near = Math.abs(c.y - carY()) < 46;
-      // Own lane collects as always. A magnet-pulled coin has to arrive first:
-      // it counts once it is within a third of a lane of the car, so the eye
-      // sees the coin reach the bonnet rather than vanish from the next lane.
-      const laneOk = c.lane === carLane
-        || (elapsed < magnetUntil && Math.abs(c.lane - carLane) === 1
-            && Math.abs((c.x ?? laneCenter(c.lane)) - laneCenter(carLane))
-               < laneWidth() / 3);
-      if (near && laneOk) {
+      // Own lane: the usual y-window. A gripped coin has already stopped at the
+      // car's height, so its only remaining test is lateral arrival - it counts
+      // once it is within a third of a lane, letting the eye see it reach the
+      // bonnet instead of vanishing from the next lane over. The magnet clock is
+      // not re-checked here: the grip was granted while the field was up, and a
+      // coin already sliding must be allowed to land.
+      const hit = c.grip
+        ? Math.abs(c.x - laneCenter(carLane)) < laneWidth() / 3
+        : (c.lane === carLane && Math.abs(c.y - carY()) < 46);
+      if (hit) {
         score = S.collectCoin(score);
         // Counts the CURRENT coin, so the second quick coin in a row already
         // rises a semitone. Resetting to 0 here made the ear wait until the
@@ -381,6 +394,12 @@ export function startGame(canvas, hud, questions, onFinish) {
         popScore('+' + COIN_POINTS, cx, c.y, true);
         return false;
       }
+      // A gripped coin has stopped scrolling, so it can never fall off the
+      // bottom - it needs its own exit or it would hang in mid-air forever if
+      // the player swerved away before it landed. Releasing it restores normal
+      // falling from wherever it got to.
+      if (c.grip && Math.abs(c.lane - carLane) !== 1
+                 && c.lane !== carLane) c.grip = false;
       return c.y < H + 60;
     });
 

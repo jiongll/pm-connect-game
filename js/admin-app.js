@@ -59,8 +59,7 @@ async function boot() {
   // glued to their words.
   $('board-legend').textContent =
     '\u{1F91D} Paired successfully +' + MATCH_BONUS
-    + '  \u{1F49A} From non-' + HOME_FAMILY + ' TF +' + ROOKIE_BONUS
-    + ' (the quiz is ' + HOME_FAMILY + ' trivia)';
+    + '  \u{1F49A} From non-' + HOME_FAMILY + ' TF +' + ROOKIE_BONUS;
 
   const playerUrl = location.href.replace(/admin\.html.*$/, '');
   try { new QRCode($('qr'), { text: playerUrl, width: 420, height: 420 }); }

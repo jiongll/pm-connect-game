@@ -29,12 +29,21 @@ export const BOOST_SECONDS = 2;       // seconds the boost lasts
 // magnet switched lane-changing off for the rest of the run, which removed the
 // only decision the player makes. Longer than the boost so it is worth having.
 export const MAGNET_SECONDS = 5;      // seconds the coin magnet lasts after a correct answer
-// How hard the magnet pulls an adjacent-lane coin toward the car, as an
-// exponential ease rate (per second). Tuned against the collect window rather
-// than by eye: at top speed a coin is in range for only ~9 frames, so a gentle
-// pull would drop coins on a phone that stutters. 22 arrives in 3 frames at
-// 60fps and still shows the coin travelling. Lower = more drift, more misses.
-export const MAGNET_PULL = 22;
+// How hard the magnet yanks a gripped coin sideways into the car, as an
+// exponential ease rate (per second). A gripped coin has stopped falling, so it
+// is no longer racing a closing window - the rate is purely about being seen.
+// Measured, not eyeballed: at the old rate of 22 the coin crossed the lane in
+// one step at 30fps and was collected on the very frame it was gripped, so it
+// vanished from the next lane instead of visibly sliding. 6 gives a steady
+// 130-170ms slide at 60, 30 and 20fps alike. Higher = snappier but invisible on
+// a phone that drops frames; lower starts to read as drift.
+export const MAGNET_PULL = 6;
+// How far above the car the field grabs a coin in the next lane, in pixels.
+// Comfortably wider than the 46px collect window so the sideways slide starts
+// before the coin is dead level and is visible rather than instant. It also has
+// to exceed one frame of travel at top speed (~11px at 60fps, ~22px at 30fps)
+// or a stuttering phone would skip straight past the grab point.
+export const GRIP_WINDOW = 90;
 
 // Quiz (question coin) tuning
 export const QUIZ_COUNT = 6;          // question coins per heat

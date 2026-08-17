@@ -60,19 +60,15 @@
 
   <section id="screen-results" class="screen">
     <h2>Finished!</h2>
-    <!-- The run detail gets a few seconds of its own, then folds into
-         #score-slim so the partner task owns the screen while the bonus clock
-         runs. #bonus-rows deliberately sits OUTSIDE the folding set: the
-         "+35 for pairing" credit is the reason to get up, so it stays visible
-         through the whole bonus round. Tapping the slim line brings the rest
-         back. -->
+    <!-- Nothing here collapses. The score you drove, the vehicle you earned and
+         the bonus rows all stay on screen for the whole results phase - the
+         bonus rows especially, since "+35 for pairing" is the reason to get out
+         of the chair. -->
     <div id="score-full">
       <p class="big-score" id="big-score"><span id="final-score">0</span> <span>pts</span></p>
       <canvas id="final-ride"></canvas>
       <p id="tier-line"><b id="final-tier">GrabBike</b></p>
-      <p id="score-slim" title="Tap for the full breakdown"></p>
       <div id="bonus-rows"></div>
-      <p id="run-recap"></p>
     </div>
     <p id="submit-status"></p>
     <p id="rank-line"></p>
