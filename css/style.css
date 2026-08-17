@@ -265,7 +265,6 @@ body.admin #gate-error { color: #ff7a7a; min-height: 1.2em; margin: 0; }
 }
 #badge-rule { color: #cfe3d6; margin-bottom: .5rem; }
 #pair-count { color: #ffd76a; font-weight: 700; min-height: 1.2em; margin-top: .5rem; }
-#remote-line { color: #9db3a6; font-size: .9rem; margin-top: .6rem; }
 
 /* ── Delight pass: celebration + openers (R31, R33) ─────────────── */
 #opener-card {
