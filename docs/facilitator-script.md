@@ -49,6 +49,13 @@ line as a challenge, and the room total as the closer ("X points, Y new
 cross-TF connections in 90 seconds"). Crown the winner: "drove well AND
 got off their chair." In a rush? Double-press reveals everything at once.
 
+Say the rockets out loud, ideally on the first press, before anyone has to
+ask: "🚀 means +25, because the quiz is Mobility trivia and you were
+answering about someone else's product. Fair's fair." Two marks total, both
+in the legend under the board - 🤝 is the +35 for connecting. Note the
+rockets only appear once the heat is over, so nothing on the mid-match
+board needs explaining.
+
 **5:30-10:00** - Top 3 stand up / wave on the call. One line each: name,
 Tech Family. Segue into the session.
 
