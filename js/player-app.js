@@ -225,6 +225,7 @@ function showResultsShell() {
   $('tier-line').style.display = 'none';                  // no run, no tier line
   $('final-ride').style.display = 'none';                 // ...and no ride to show
   $('run-recap').style.display = 'none';                  // ...and nothing to recap
+  runDetail = ['big-score'];                              // so expanding never resurrects them
   renderBonusRows();                                      // the bonus still applies to a stored score
   setScoreCollapsed(false);                               // enterBonus folds it, same as a fresh run
 }
@@ -352,12 +353,19 @@ function paintSlimLine() {
     + ' · tap for detail';
 }
 
-// Collapse when the bonus round starts, expand when it ends. The rank arrives
-// at the buzzer (showRank) and is the payoff, so state C re-expands on its own
-// rather than leaving the good news inside a folded panel.
+// Which parts of the run detail this player actually has. A late joiner never
+// drove, so showResultsShell drops the sprite, tier and recap from the set and
+// expanding must not resurrect them.
+let runDetail = ['big-score', 'final-ride', 'tier-line', 'run-recap'];
+
+// During the bonus round the scorekeeping folds away but the bonus rows do NOT:
+// they are the reason to get out of the chair, so "Paired successfully +35" has
+// to stay on screen next to the task that earns it. Only the finished-run detail
+// (big number, sprite, tier, recap) collapses into the slim line. The rank
+// arrives at the buzzer (showRank) and is the payoff, so state C expands again.
 function setScoreCollapsed(collapsed) {
   if (collapsed) paintSlimLine();
-  $('score-full').style.display = collapsed ? 'none' : '';
+  for (const id of runDetail) $(id).style.display = collapsed ? 'none' : '';
   $('score-slim').style.display = collapsed ? '' : 'none';
 }
 
@@ -411,11 +419,12 @@ function enterBonus(remainingMs) {
   $('claim-form').style.display = 'block';
   $('claim-btn').addEventListener('click', claim);
   if (me.claimed_match) lockClaim();            // refreshed mid-round with a claim already saved
-  // The score folds to one line so the partner task owns the screen. Behind the
-  // interstitial where there is one, so the fold is never seen mid-read.
+  // The run detail folds to one line so the partner task owns the screen - the
+  // bonus rows stay put. Behind the interstitial where there is one, so the
+  // fold is never seen mid-read.
   setScoreCollapsed(true);
   $('score-slim').addEventListener('click', () => setScoreCollapsed(false));
-  $('score-full').addEventListener('click', () => setScoreCollapsed(true));
+  $('big-score').addEventListener('click', () => setScoreCollapsed(true));
   bonusTick();
   tickIv = setInterval(bonusTick, 250);
   pollIv = setInterval(checkConnected, 4000);
@@ -531,7 +540,9 @@ async function checkConnected() {
     $('match-instructions').textContent = '';
     $('badge-rule').style.display = 'none';
     renderBonusRows();                           // the 🤝 row earns its place now
-    if ($('score-full').style.display === 'none') paintSlimLine();
+    // The slim line carries the running total, so it has to learn about the +35
+    // it just earned. Repaint whenever it is the visible view.
+    if ($('score-slim').style.display !== 'none') paintSlimLine();
     celebrate(mine, players);                   // R33 then R31
   }
 }

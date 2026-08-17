@@ -1,6 +1,6 @@
 import { HEAT_DURATION_MS, TIER_BONUS, COIN_POINTS, COLLISION_PENALTY,
          BASE_SPEED, COIN_EVERY, OBSTACLE_EVERY,
-         BOOST_MULTIPLIER, BOOST_SECONDS, MAGNET_SECONDS,
+         BOOST_MULTIPLIER, BOOST_SECONDS, MAGNET_SECONDS, MAGNET_PULL,
          QUIZ_COUNT, QUIZ_SECONDS,
          QUIZ_FIRST_AT, QUIZ_LAST_AT } from './config.js';
 import * as S from './scoring.js';
@@ -97,7 +97,13 @@ export function startGame(canvas, hud, questions, onFinish) {
     canvas.width = W * dpr; canvas.height = H * dpr;
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // A magnet-pulled coin holds an absolute x, which the new road width would
+    // make meaningless - dropping it snaps the coin back to its lane centre.
+    // Gated on coinsLive because the first resize() below runs while `coins`
+    // is still in its dead zone, where even reading it throws.
+    if (coinsLive) for (const c of coins) delete c.x;
   }
+  let coinsLive = false;                       // set once `coins` is initialised
   resize();
   window.addEventListener('resize', resize);
 
@@ -117,6 +123,7 @@ export function startGame(canvas, hud, questions, onFinish) {
   let elapsed = 0, wall = 0, last = null, raf = null, finished = false;
   let carLane = 1, tier = 0, score = 0;
   let coins = [], obstacles = [], quizCoin = null, quiz = null, popups = [];
+  coinsLive = true;                            // resize() may now clear pulled coins
   let dashOffset = 0, coinTimer = 0.4, obstacleTimer = 1.2;
   let nextQuiz = 0, qIndex = 0;
   let boostUntil = -1, invulnUntil = -1, feedback = null;
@@ -248,7 +255,7 @@ export function startGame(canvas, hud, questions, onFinish) {
     quiz.timerEl.className = 'q-verdict ' + (correct ? 'hit' : 'miss');
     quiz.timerEl.textContent = correct
       ? 'Correct!'
-      : (picked < 0 ? 'Time ran out' : 'Nope');
+      : (picked < 0 ? 'Time out' : 'Nope');
     setTimeout(() => resume(correct, picked), correct ? 1100 : 2200);
   }
 
@@ -284,7 +291,7 @@ export function startGame(canvas, hud, questions, onFinish) {
           sub: magnetExplained ? null
                                : 'Coin magnet activated - ' + MAGNET_SECONDS + ' seconds',
           until: elapsed + (magnetExplained ? 1.5 : 2.2), good: true }
-      : { text: picked < 0 ? 'Time ran out - no change' : 'Nope',
+      : { text: picked < 0 ? 'Time out - no change' : 'Nope',
           until: elapsed + 1.5, good: false };
     if (correct) magnetExplained = true;
     invulnUntil = elapsed + 0.8;                 // grace while the road restarts
@@ -323,6 +330,23 @@ export function startGame(canvas, hud, questions, onFinish) {
 
     for (const c of coins) c.y += dy;
     for (const o of obstacles) o.y += dy;
+
+    // The magnet pulls, it does not teleport. A coin one lane over eases toward
+    // the car's lane centre while the field is up. The rate is deliberately
+    // brisk: a coin only sits inside the collect window for ~9 frames at top
+    // speed (Exec tier, boosted), so a slower pull would let coins sail past
+    // uncollected on a phone that drops frames - the magnet would read as a
+    // penalty. At MAGNET_PULL the coin arrives in 3 frames at 60fps and 1 at
+    // 30fps, still visible travel, with margin to spare. It keeps its own x
+    // afterwards, so if the magnet expires mid-flight the coin just stops.
+    if (elapsed < magnetUntil) {
+      const target = laneCenter(carLane);
+      for (const c of coins) {
+        if (Math.abs(c.lane - carLane) !== 1) continue;
+        if (c.x === undefined) c.x = laneCenter(c.lane);
+        c.x += (target - c.x) * Math.min(1, dt * MAGNET_PULL);
+      }
+    }
     if (quizCoin) quizCoin.y += dy;
     if (speedLines) {
       for (const l of speedLines) {            // R19: streaks fall at 2x road speed
@@ -333,8 +357,13 @@ export function startGame(canvas, hud, questions, onFinish) {
 
     coins = coins.filter(c => {
       const near = Math.abs(c.y - carY()) < 46;
+      // Own lane collects as always. A magnet-pulled coin has to arrive first:
+      // it counts once it is within a third of a lane of the car, so the eye
+      // sees the coin reach the bonnet rather than vanish from the next lane.
       const laneOk = c.lane === carLane
-        || (elapsed < magnetUntil && Math.abs(c.lane - carLane) === 1);
+        || (elapsed < magnetUntil && Math.abs(c.lane - carLane) === 1
+            && Math.abs((c.x ?? laneCenter(c.lane)) - laneCenter(carLane))
+               < laneWidth() / 3);
       if (near && laneOk) {
         score = S.collectCoin(score);
         // Counts the CURRENT coin, so the second quick coin in a row already
@@ -345,8 +374,11 @@ export function startGame(canvas, hud, questions, onFinish) {
         coinsHit++;
         if (streak > bestStreak) bestStreak = streak;
         playCoin(Math.pow(1.0595, streak - 1));  // R12: one semitone per streak step
-        spawnBurst(laneCenter(c.lane), c.y, 5, GOLD, 0.3);   // R13
-        popScore('+' + COIN_POINTS, laneCenter(c.lane), c.y, true);
+        // Burst and pop at where the coin actually is - a magnet-pulled coin
+        // has left its lane centre by now.
+        const cx = c.x ?? laneCenter(c.lane);
+        spawnBurst(cx, c.y, 5, GOLD, 0.3);                   // R13
+        popScore('+' + COIN_POINTS, cx, c.y, true);
         return false;
       }
       return c.y < H + 60;
@@ -644,7 +676,7 @@ export function startGame(canvas, hud, questions, onFinish) {
       }
     }
 
-    for (const c of coins) drawCoin(laneCenter(c.lane), c.y);
+    for (const c of coins) drawCoin(c.x ?? laneCenter(c.lane), c.y);
     for (const o of obstacles) drawCone(laneCenter(o.lane), o.y);
     if (quizCoin) {
       drawQuizCoin(laneCenter(quizCoin.lane), quizCoin.y);

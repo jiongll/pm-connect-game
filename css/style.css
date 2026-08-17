@@ -396,9 +396,11 @@ body.admin #gate-box .chequer { max-width: none; margin: -.4rem 0 .2rem; }
 .bonus-row i { font-style: normal; font-weight: 800; color: #00b14f; }
 
 /* The collapsed score. Deliberately small and grey: during the bonus round the
-   partner card should win the eye, and this line is only a receipt. Hidden by
-   :empty rather than a blanket display:none - setScoreCollapsed clears the
-   inline style to reveal it, which a CSS `none` would silently override. */
+   partner card should win the eye, and this line is only a receipt. It sits
+   directly above #bonus-rows, which never collapse - the receipt shrinks, the
+   points you can still earn stay full size. Hidden by :empty rather than a
+   blanket display:none - setScoreCollapsed clears the inline style to reveal
+   it, which a CSS `none` would silently override. */
 #score-slim {
   color: #9db3a6; font-size: .95rem;
   margin: .2rem 0 .4rem; cursor: pointer;
