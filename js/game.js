@@ -4,6 +4,9 @@ import { HEAT_DURATION_MS, TIER_BONUS, COIN_POINTS, COLLISION_PENALTY,
          QUIZ_FIRST_AT, QUIZ_LAST_AT } from './config.js';
 import * as S from './scoring.js';
 import { unlockAudio, playCoin, playCrash, playLevelUp, playFinish, playSoftTick } from './sound.js';
+import { sprites, loadVehicleSprites } from './sprites.js';
+
+loadVehicleSprites();                            // fetches + slices images/vehicles.png once
 
 // Grab app visual language: white fleet, green glass, charcoal wheels,
 // dark premium tiers. One palette, used by every drawing below.
@@ -16,8 +19,13 @@ const WIN_EDGE = '#00B14F';
 const GOLD = '#F5A623';
 const POPUP_LIFE = 0.9;                          // seconds a score popup lives
 
+// On-screen sprite heights per tier, sized to match the code-drawn vehicles
+// they replace (bike to Exec) so hitboxes and lane feel stay identical.
+const SPRITE_H = [80, 88, 100, 103, 112, 110, 124];
+
 // Car liveries, Standard to Exec. Indices 0-1 (GrabBike, GrabTukTuk)
-// have their own drawing functions.
+// have their own drawing functions. Kept as the fallback when the sprite
+// sheet is missing or fails to slice - the game must never render blank.
 const CAR_STYLE = [null, null,
   { body: BODY_WHITE, stretch: 0,  van: false, sparkle: false, trim: null,      winAlpha: 1 },   // Standard
   { body: BODY_WHITE, stretch: 0,  van: false, sparkle: true,  trim: null,      winAlpha: 1 },   // Plus
@@ -383,7 +391,12 @@ export function startGame(canvas, hud, questions, onFinish) {
     ctx.globalAlpha = flash ? 0.4 : 1;
     ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';      // shared ground shadow
     ctx.beginPath(); ctx.ellipse(cx, cy + 42, 30, 8, 0, 0, Math.PI * 2); ctx.fill();
-    if (tier === 0) drawBike(cx, cy);
+    const sp = sprites.ready && sprites.list[tier];
+    if (sp) {
+      const sh = SPRITE_H[tier], sw = sh * sp.w / sp.h;
+      ctx.drawImage(sp.canvas, cx - sw / 2, cy - sh / 2, sw, sh);
+    }
+    else if (tier === 0) drawBike(cx, cy);
     else if (tier === 1) drawTukTuk(cx, cy);
     else drawCarBody(cx, cy);
     if (elapsed < whiteUntil) {                // R18: promotion flash over the silhouette
