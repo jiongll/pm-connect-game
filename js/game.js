@@ -4,9 +4,10 @@ import { HEAT_DURATION_MS, TIER_BONUS, COIN_POINTS, COLLISION_PENALTY,
          QUIZ_FIRST_AT, QUIZ_LAST_AT } from './config.js';
 import * as S from './scoring.js';
 import { unlockAudio, playCoin, playCrash, playLevelUp, playFinish, playSoftTick } from './sound.js';
-import { sprites, loadVehicleSprites } from './sprites.js';
+import { sprites, loadVehicleSprites, loadConeSprite } from './sprites.js';
 
 loadVehicleSprites();                            // fetches + slices images/vehicles.png once
+loadConeSprite();                                // fetches + crops images/cone.png once
 
 // Grab app visual language: white fleet, green glass, charcoal wheels,
 // dark premium tiers. One palette, used by every drawing below.
@@ -22,6 +23,7 @@ const POPUP_LIFE = 0.9;                          // seconds a score popup lives
 // On-screen sprite heights per tier, sized to match the code-drawn vehicles
 // they replace (bike to Exec) so hitboxes and lane feel stay identical.
 const SPRITE_H = [80, 88, 100, 103, 112, 110, 124];
+const CONE_H = 44;                               // sprite cone height, matches drawn cone
 
 // Car liveries, Standard to Exec. Indices 0-1 (GrabBike, GrabTukTuk)
 // have their own drawing functions. Kept as the fallback when the sprite
@@ -366,6 +368,12 @@ export function startGame(canvas, hud, questions, onFinish) {
   function drawCone(x, y) {                    // traffic cone
     ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.beginPath(); ctx.ellipse(x, y + 18, 19, 5, 0, 0, Math.PI * 2); ctx.fill();
+    const sp = sprites.cone;                   // image cone when loaded, drawn cone otherwise
+    if (sp) {
+      const sh = CONE_H, sw = sh * sp.w / sp.h;
+      ctx.drawImage(sp.canvas, x - sw / 2, y + 19 - sh, sw, sh);
+      return;
+    }
     ctx.fillStyle = '#ff7a1a';
     ctx.beginPath();
     ctx.moveTo(x, y - 22); ctx.lineTo(x - 16, y + 14);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { findRuns, SPRITE_COUNT } from '../js/sprites.js';
+import { findRuns, opaqueBounds, SPRITE_COUNT } from '../js/sprites.js';
 
 // Build a column-occupancy array from [gap, run, gap, run...] widths.
 function columns(...widths) {
@@ -36,4 +36,20 @@ test('empty sheet gives no runs', () => {
 test('run bounds are inclusive and exact', () => {
   const occ = columns(10, 25, 10);
   assert.deepEqual(findRuns(occ), [{ start: 10, end: 34 }]);
+});
+
+// RGBA buffer with opaque pixels only at the given (x, y) points.
+function rgba(w, h, ...points) {
+  const data = new Uint8ClampedArray(w * h * 4);
+  for (const [x, y] of points) data[(y * w + x) * 4 + 3] = 255;
+  return data;
+}
+
+test('opaqueBounds finds the exact box around opaque pixels', () => {
+  const data = rgba(6, 5, [1, 1], [4, 3]);
+  assert.deepEqual(opaqueBounds(data, 6, 5), { left: 1, right: 4, top: 1, bottom: 3 });
+});
+
+test('opaqueBounds returns null for a fully transparent image', () => {
+  assert.equal(opaqueBounds(rgba(4, 4), 4, 4), null);
 });

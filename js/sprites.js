@@ -10,7 +10,7 @@ const ALPHA_ON = 40;      // a pixel this opaque counts as vehicle
 const MIN_RUN = 10;       // ignore occupied runs narrower than this (noise)
 const MERGE_GAP = 8;      // gaps narrower than this are inside one vehicle
 
-export const sprites = { ready: false, list: [] };
+export const sprites = { ready: false, list: [], cone: null };
 
 // Pure: boolean column-occupancy array -> [{start, end}] inclusive runs of
 // true columns. Gaps under mergeGap are bridged; runs under minRun dropped.
@@ -29,6 +29,23 @@ export function findRuns(occupied, mergeGap = MERGE_GAP, minRun = MIN_RUN) {
     else merged.push({ ...r });
   }
   return merged.filter(r => r.end - r.start + 1 >= minRun);
+}
+
+// Pure: bounding box of pixels at least ALPHA_ON opaque, inclusive, or null
+// when the image is fully transparent.
+export function opaqueBounds(data, w, h) {
+  let left = w, right = -1, top = h, bottom = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (data[(y * w + x) * 4 + 3] >= ALPHA_ON) {
+        if (x < left) left = x;
+        if (x > right) right = x;
+        if (y < top) top = y;
+        if (y > bottom) bottom = y;
+      }
+    }
+  }
+  return right < 0 ? null : { left, right, top, bottom };
 }
 
 // The sheet may carry real transparency or a baked light background (white
@@ -129,4 +146,37 @@ export function loadVehicleSprites() {
   };
   img.onerror = () => console.warn('vehicles.png missing - using drawn vehicles');
   img.src = new URL('../images/vehicles.png', import.meta.url);
+}
+
+// The obstacle cone is a single image, images/cone.png, loaded with the
+// same guarantees as the sheet: baked background cleared if present, tight
+// crop to content, and on any failure sprites.cone stays null so the game
+// keeps its code-drawn cone.
+export function loadConeSprite() {
+  if (typeof Image === 'undefined' || typeof document === 'undefined') return;
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const im = ctx.getImageData(0, 0, c.width, c.height);
+      if (!borderIsTransparent(im.data, c.width, c.height)) {
+        clearBackground(im.data, c.width, c.height);
+        ctx.putImageData(im, 0, 0);
+      }
+      const b = opaqueBounds(im.data, c.width, c.height);
+      if (!b) { console.warn('cone.png is empty - using drawn cone'); return; }
+      const w = b.right - b.left + 1, h = b.bottom - b.top + 1;
+      const out = document.createElement('canvas');
+      out.width = w; out.height = h;
+      out.getContext('2d').drawImage(c, b.left, b.top, w, h, 0, 0, w, h);
+      sprites.cone = { canvas: out, w, h };
+    } catch (e) {
+      console.warn('cone image failed, using drawn cone', e);
+    }
+  };
+  img.onerror = () => console.warn('cone.png missing - using drawn cone');
+  img.src = new URL('../images/cone.png', import.meta.url);
 }
