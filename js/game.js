@@ -287,7 +287,7 @@ export function startGame(canvas, hud, questions, onFinish) {
     quiz.timerEl.className = 'q-verdict ' + (correct ? 'hit' : 'miss');
     quiz.timerEl.textContent = correct
       ? 'Correct!'
-      : (picked < 0 ? 'Time out' : 'Nope');
+      : (picked < 0 ? 'Time out' : 'Good try');
     setTimeout(() => resume(correct, picked), correct ? 1100 : 2200);
   }
 
@@ -321,7 +321,7 @@ export function startGame(canvas, hud, questions, onFinish) {
                       : 'Upgraded to ' + S.TIERS[tier] + '!',
           sub: magnetExplained ? null : 'Magnet activated',
           until: elapsed + (magnetExplained ? 1.5 : 2.2), good: true }
-      : { text: picked < 0 ? 'Time out - no change' : 'Nope',
+      : { text: picked < 0 ? 'Time out' : 'Good try',
           until: elapsed + 1.5, good: false };
     if (correct) magnetExplained = true;
     invulnUntil = elapsed + 0.8;                 // grace while the road restarts
