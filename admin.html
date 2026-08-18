@@ -77,15 +77,8 @@
     <p id="field-title">The chasing pack</p>
     <table class="board"><tbody id="board-field"></tbody></table>
   </div>
-  <!-- The art lives inside the podium row itself, ordered to sit right beside the
-       winner's tile. Standing it outside the row put it at the far end, next to
-       3rd place, which is not who it belongs to. It is flex:0 0 auto so it takes
-       its own width and never squashes the three tiles.
-       Art is decorative only, hence the empty alt. -->
   <div id="podium-stage">
-    <ol id="podium">
-      <img id="podium-art" src="images/champion-trophy.png" alt="" hidden>
-    </ol>
+    <ol id="podium"></ol>
   </div>
   <div id="awards"></div>
   <table class="board"><tbody id="board-match"></tbody></table>
