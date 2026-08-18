@@ -26,5 +26,5 @@ export const QUESTIONS = [
   { q: 'Which ride-hailing player is NOT yet integrated with Grab?',
     options: ['BlueBird', 'Didi', 'Careem'], correct: 2 },
   { q: '"Redbull" at Grab is a…',
-    options: ['Racing team', 'Mobility project codename', "A Mobility PM's nickname"], correct: 1 },
+    options: ['Mobility mascot', 'Mobility project codename', "A Mobility PM's nickname"], correct: 1 },
 ];
