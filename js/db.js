@@ -95,7 +95,7 @@ export function onGameState(cb) {
         { event: 'UPDATE', schema: 'public', table: 'game_state' },
         payload => cb(payload.new))
     .subscribe();
-  const poll = setInterval(async () => cb(await getGameState()), 3000);
+  const poll = setInterval(async () => cb(await getGameState()), 8000);
   return () => { client.removeChannel(ch); clearInterval(poll); };
 }
 
@@ -105,7 +105,7 @@ export function onPlayers(session, cb) {
     .on('postgres_changes',
         { event: '*', schema: 'public', table: 'players' }, push)
     .subscribe();
-  const poll = setInterval(push, 5000);
+  const poll = setInterval(push, 12000);
   push();
   return () => { client.removeChannel(ch); clearInterval(poll); };
 }

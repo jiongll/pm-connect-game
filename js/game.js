@@ -150,6 +150,9 @@ export function startGame(canvas, hud, questions, onFinish) {
   }
 
   let elapsed = 0, wall = 0, last = null, raf = null, finished = false;
+  // R25: the heat clock reads real elapsed time, not summed frame deltas, so a
+  // slow phone or a backgrounded tab cannot stretch the 90 s past the buzzer.
+  let startTs = null;
   let carLane = 1, tier = 0, score = 0;
   let coins = [], obstacles = [], quizCoin = null, quiz = null, popups = [];
   coinsLive = true;                            // resize() may now clear pulled coins
@@ -164,7 +167,7 @@ export function startGame(canvas, hud, questions, onFinish) {
   let shakeUntil = -1;                         // R14: screen shake on crash
   let whiteUntil = -1, ringStart = -1;         // R18: upgrade flash + expanding ring
   let speedLines = null;                       // R19: streaks while boosted
-  let labelDone = false;                       // R21: only the first '?' carries a label
+  let labelsShown = 0;                         // R21: only the first two '?' carry a label
   let magnetExplained = false;                 // the aura gets named once, then it is learnt
 
   function moveLeft() { carLane = Math.max(0, carLane - 1); }
@@ -313,12 +316,10 @@ export function startGame(canvas, hud, questions, onFinish) {
     // 22px text on a phone-width canvas. The magnet gets a smaller second line,
     // and only the first time: an unexplained gold aura is a mystery, but a
     // caption on every correct answer is nagging. After one showing it is learnt.
-    // The duration comes from MAGNET_SECONDS so the copy cannot drift from it.
     feedback = correct
       ? { text: atMax ? 'Exec bonus +' + TIER_BONUS + '!'
                       : 'Upgraded to ' + S.TIERS[tier] + '!',
-          sub: magnetExplained ? null
-                               : 'Coin magnet activated - ' + MAGNET_SECONDS + ' seconds',
+          sub: magnetExplained ? null : 'Magnet activated',
           until: elapsed + (magnetExplained ? 1.5 : 2.2), good: true }
       : { text: picked < 0 ? 'Time out - no change' : 'Nope',
           until: elapsed + 1.5, good: false };
@@ -352,8 +353,8 @@ export function startGame(canvas, hud, questions, onFinish) {
       obstacleTimer = OBSTACLE_EVERY;
     }
     if (!quizCoin && nextQuiz < quizTimes.length && wall >= quizTimes[nextQuiz]) {
-      quizCoin = { lane: freeLane(), y: -40, labelled: !labelDone };
-      labelDone = true;                        // R21: the label runs exactly once
+      quizCoin = { lane: freeLane(), y: -40, labelled: labelsShown < 2 };
+      labelsShown++;                           // R21: the label runs on the first two
       nextQuiz++;
     }
 
@@ -728,7 +729,7 @@ export function startGame(canvas, hud, questions, onFinish) {
       if (quizCoin.labelled) {                 // R21: kills the "is that a hazard?" pause
         ctx.font = 'bold 13px system-ui';
         ctx.fillStyle = '#ffd76a';
-        ctx.fillText('Drive into it - trivia time', laneCenter(quizCoin.lane), quizCoin.y - 52);
+        ctx.fillText('Drive into it', laneCenter(quizCoin.lane), quizCoin.y - 52);
       }
     }
     drawVehicle(laneCenter(carLane), carY());
@@ -830,9 +831,10 @@ export function startGame(canvas, hud, questions, onFinish) {
 
   function frame(ts) {
     if (last === null) last = ts;
+    if (startTs === null) startTs = ts;
     const dt = Math.min((ts - last) / 1000, 0.05);  // clamp background-tab jumps
     last = ts;
-    wall += dt;                                // the 90 s heat clock never pauses
+    wall = (ts - startTs) / 1000;              // R25: real time, so it never pauses
     if (!quiz) {                               // the world still freezes mid-quiz
       update(dt);
       draw();

@@ -137,7 +137,10 @@ label .id-field { margin-top: .35rem; }
 /* Short outcome word. The green row already says WHICH answer was right, so
    this only names the result - and keeps a non-colour signal for the reveal. */
 .q-verdict {
-  margin-top: .9rem; font-weight: 800; font-size: 1.05rem; min-height: 1.3em;
+  /* Same slot as .q-timer - it replaces it in place, so the options must not
+     jump when the verdict lands. */
+  order: -1; margin-bottom: .8rem; font-weight: 800;
+  font-size: 1.05rem; min-height: 1.3em;
 }
 .q-verdict.miss { color: #ffd76a; }
 .q-verdict.hit { color: #00b14f; }

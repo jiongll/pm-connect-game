@@ -49,7 +49,8 @@ export const GRIP_WINDOW = 90;
 export const QUIZ_COUNT = 6;          // question coins per heat
 export const QUIZ_SECONDS = 10;       // countdown to answer once the game pauses
 export const QUIZ_FIRST_AT = 8;       // seconds into the heat the first question coin appears
-export const QUIZ_LAST_AT = 75;       // seconds mark of the last question coin
+export const QUIZ_LAST_AT = 66;       // seconds mark of the last question coin - leaves
+                                      // the FINAL 10 coin shower clear of a slow answer
 
 // Confirmed 2026-08-16 - the real Tech Family list for the event.
 export const TECH_FAMILIES = [

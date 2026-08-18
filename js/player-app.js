@@ -354,7 +354,10 @@ async function onGameFinish(finalScore, tier) {
   $('submit-status').textContent = ok
     ? '' : 'Could not reach the leaderboard - show this screen to the host.';
   $('submit-status').classList.toggle('warn', !ok);
-  const state = await db.getGameState();        // shared anchor for the deadline
+  // Shared anchor for the deadline. A network wobble here must never cost the
+  // player their bonus round - fall through to the local full-length timer.
+  let state = null;
+  try { state = await db.getGameState(); } catch { state = null; }
   const p = state ? computePhase(state.started_at, Date.now()) : null;
   enterBonus(p ? p.bonusRemainingMs : BONUS_ROUND_MS);
 }
@@ -399,7 +402,7 @@ async function copyId() {
 function bonusTick() {
   const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
   if (left > 0) {
-    $('bonus-timer').textContent = 'Bonus round: ' + left + 's left';
+    $('bonus-timer').textContent = left + 's left';   // the heading already says "Bonus round"
     $('bonus-timer').classList.toggle('urgent', left <= 10);       // R34: fun panic
     if (left <= 10 && !connectedDone) {
       $('match-instructions').textContent = '10 seconds - grab anyone with different badges!';
