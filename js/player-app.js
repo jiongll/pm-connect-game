@@ -5,7 +5,7 @@ import { QUESTIONS } from './questions.js';
 import { TIERS } from './scoring.js';
 import { startGame, drawBikeSprite, drawTierSprite } from './game.js';
 import * as db from './db.js';
-import { bonusAwarded, validatePartner, connectionStats, buildLeaderboard,
+import { bonusAwarded, validatePartner, buildLeaderboard,
          rookieAwarded } from './pairing.js';
 import { computePhase } from './phase.js';
 import { unlockAudio, playTick, playGo, playBonusSting, playChime } from './sound.js';
@@ -480,11 +480,7 @@ function lockClaim() {
 async function checkConnected() {
   const players = await db.getPlayers(me.session);
   if (players.length === 0) return;             // fetch failed - try again next poll
-  const stats = connectionStats(players);       // R32: social proof, live
-  const pairs = Math.floor(stats.connected / 2);
-  $('pair-count').textContent =
-    pairs > 0 ? pairs + (pairs === 1 ? ' pair' : ' pairs') + ' made so far' : '';
-  if (connectedDone) return;                    // paired: keep the counter ticking only
+  if (connectedDone) return;
   const mine = players.find(pl => pl.id === me.id);
   if (mine && bonusAwarded(mine, players)) {
     connectedDone = true;

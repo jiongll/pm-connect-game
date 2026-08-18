@@ -329,7 +329,6 @@ body.admin #gate-box .chequer { max-width: none; margin: -.4rem 0 .2rem; }
   background: #13241b; border: 2px solid #00b14f; color: #d9fcde;
 }
 #badge-rule { color: #cfe3d6; margin-bottom: .5rem; }
-#pair-count { color: #ffd76a; font-weight: 700; min-height: 1.2em; margin-top: .5rem; }
 
 /* ── Delight pass: celebration + openers (R31, R33) ─────────────── */
 #opener-card {
