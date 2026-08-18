@@ -123,6 +123,32 @@ export function startGame(canvas, hud, questions, onFinish) {
       : QUIZ_FIRST_AT + i * (QUIZ_LAST_AT - QUIZ_FIRST_AT) / (QUIZ_COUNT - 1));
   }
 
+  // Coins and cones used to pick their lane independently, so a cone spawning
+  // within a fraction of a second of a coin landed on top of it and the pair
+  // travelled down the road overlapping - unreadable, and unfair when the cone
+  // hid the coin. SPAWN_CLEAR is the vertical gap a new item needs from
+  // anything already near the top of its lane: a cone stands 44px tall and a
+  // coin is a 32px disc, so ~54px clears both with a little air.
+  //
+  // freeLane() picks at random among the lanes that are clear, and only falls
+  // back to a plain random lane if all three are blocked - a spawn is never
+  // skipped, so the rhythm of the road is unchanged.
+  const SPAWN_CLEAR = 54;
+
+  function laneBlocked(lane) {
+    for (const c of coins) if (c.lane === lane && c.y < SPAWN_CLEAR) return true;
+    for (const o of obstacles) if (o.lane === lane && o.y < SPAWN_CLEAR) return true;
+    if (quizCoin && quizCoin.lane === lane && quizCoin.y < SPAWN_CLEAR) return true;
+    return false;
+  }
+
+  function freeLane() {
+    const open = [];
+    for (let i = 0; i < 3; i++) if (!laneBlocked(i)) open.push(i);
+    if (!open.length) return Math.floor(Math.random() * 3);   // all busy: keep the cadence
+    return open[Math.floor(Math.random() * open.length)];
+  }
+
   let elapsed = 0, wall = 0, last = null, raf = null, finished = false;
   let carLane = 1, tier = 0, score = 0;
   let coins = [], obstacles = [], quizCoin = null, quiz = null, popups = [];
@@ -316,17 +342,17 @@ export function startGame(canvas, hud, questions, onFinish) {
 
     coinTimer -= dt;
     if (coinTimer <= 0) {
-      coins.push({ lane: Math.floor(Math.random() * 3), y: -30 });
+      coins.push({ lane: freeLane(), y: -30 });
       coinTimer = HEAT_DURATION_MS / 1000 - wall <= 10
         ? COIN_EVERY / 2 : COIN_EVERY;         // R25: a coin shower to finish on
     }
     obstacleTimer -= dt;
     if (obstacleTimer <= 0) {
-      obstacles.push({ lane: Math.floor(Math.random() * 3), y: -40 });
+      obstacles.push({ lane: freeLane(), y: -40 });
       obstacleTimer = OBSTACLE_EVERY;
     }
     if (!quizCoin && nextQuiz < quizTimes.length && wall >= quizTimes[nextQuiz]) {
-      quizCoin = { lane: Math.floor(Math.random() * 3), y: -40, labelled: !labelDone };
+      quizCoin = { lane: freeLane(), y: -40, labelled: !labelDone };
       labelDone = true;                        // R21: the label runs exactly once
       nextQuiz++;
     }
