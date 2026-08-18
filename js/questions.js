@@ -23,8 +23,8 @@ export const QUESTIONS = [
     options: ['~30%', '~50%', '~85%'], correct: 1 },
   { q: 'How many completed rides are surged?',
     options: ['~20%', '~30%', '~40%'], correct: 0 },
-  { q: 'Which ride-hailing player is NOT integrated with Grab?',
+  { q: 'Which ride-hailing player is NOT yet integrated with Grab?',
     options: ['BlueBird', 'Didi', 'Careem'], correct: 2 },
   { q: '"Redbull" at Grab is a…',
-    options: ['Racing team', 'Mobility project codename', "Someone's nickname"], correct: 1 },
+    options: ['Racing team', 'Mobility project codename', "A Mobility PM's nickname"], correct: 1 },
 ];
