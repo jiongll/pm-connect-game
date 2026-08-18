@@ -10,10 +10,22 @@ export const LIVE_PUSH_MS = 10_000;               // cosmetic mid-heat score pus
                                                   // (10 s keeps ~100 players' writes off each other's toes)
 export const MATCH_BONUS = 35;
 // The quiz is Mobility product trivia, so everyone outside Mobility starts a
-// step behind. Each correct answer is worth ~23 pts once the tier speed-up and
-// the magnet knock-on are counted, so 25 is about one answer: enough to
-// acknowledge the gap, too small to hand anyone the win on its own.
-export const ROOKIE_BONUS = 25;
+// step behind. Sized against the final six: three (MTT, Redbull, the
+// integrations question) are inside knowledge with no way to reason in, three
+// are guessable. So a Mobility player expects ~4 correct, an outsider ~2 - and
+// at ~23 pts per answer once the tier speed-up and the magnet knock-on are
+// counted, that is a ~46 pt structural gap.
+//
+// 35 covers about three-quarters of it. Deliberately not all of it: closing
+// the gap exactly would let the bonus decide the winner, and a victory the
+// results board visibly handed you is a hollow one to announce in the room.
+// Three-quarters is enough to feel compensated, not enough to coast on.
+//
+// Same value as MATCH_BONUS today, but keep them as separate constants: the
+// match bonus is a reward and should grow if pairing needs more pull, while
+// this is a correction whose right value depends on how many insider questions
+// are in the set. Re-sizing the trivia should move this number and not that one.
+export const ROOKIE_BONUS = 35;
 export const HOME_FAMILY = 'Mobility';           // the family the trivia favours
 export const COIN_POINTS = 2;
 export const COLLISION_PENALTY = 5;

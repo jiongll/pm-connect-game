@@ -273,7 +273,7 @@ function render() {
 
   // The rookie bonus lands at the END, not during the heat: mid-heat the
   // board climbs on real coins only, so a driver never watches a rival sit
-  // 25 points ahead for a reason the big screen has not explained yet. Once
+  // points ahead for a reason the big screen has not explained yet. Once
   // the heat is done it applies for the rest of the night.
   const rows = buildLeaderboard(players, MATCH_BONUS,
                                 heatRunning() ? 0 : ROOKIE_BONUS, HOME_FAMILY);
