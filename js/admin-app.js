@@ -71,7 +71,10 @@ async function boot() {
       'Cannot reach the game server - check this laptop\'s connection and refresh.';
   }
   const session = state ? state.session : 1;
-  db.onPlayers(session, list => { players = list; render(); });
+  // R26: at 100 players the live-score pushes land ~10x/sec, and a full board
+  // rebuild on each one stutters the projector during the heat. The newest list
+  // always wins - we only slow how often it is painted, never drop an update.
+  db.onPlayers(session, list => { players = list; scheduleRender(); });
   db.onGameState(s => {
     if (!s) return;
     if (s.session !== session) { location.reload(); return; }  // reset from another tab
@@ -251,6 +254,16 @@ function revealPress() {
 
 // 'setup' counts as running: no heat has finished, so no bonus is due yet.
 function heatRunning() { return phase === 'setup' || phase === 'heat'; }
+
+// R26: coalesce bursts of board updates into at most one paint per BOARD_PAINT_MS.
+// `players` is already the newest list by the time the timer fires, so a burst of
+// ten pushes paints once with the latest data - nothing is lost, only redrawn less.
+const BOARD_PAINT_MS = 500;
+let paintPending = null;
+function scheduleRender() {
+  if (paintPending) return;                    // a paint is already queued
+  paintPending = setTimeout(() => { paintPending = null; render(); }, BOARD_PAINT_MS);
+}
 
 function render() {
   renderJoinLine();

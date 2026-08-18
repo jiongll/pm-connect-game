@@ -364,6 +364,18 @@ async function onGameFinish(finalScore, tier) {
 
 let deadline = 0, tickIv = null, pollIv = null;
 
+// R26: partner-claim polling, brisk then backing off. Steps are seconds; the
+// last value repeats for the rest of the round. Stops the moment we are paired.
+const POLL_STEPS = [3, 3, 4, 5, 6, 8, 10, 15];
+function schedulePoll(step) {
+  const wait = POLL_STEPS[Math.min(step, POLL_STEPS.length - 1)] * 1000;
+  pollIv = setTimeout(async () => {
+    await checkConnected();
+    if (!connectedDone) schedulePoll(step + 1);   // paired means nothing left to watch
+  }, wait);
+}
+function stopPoll() { clearTimeout(pollIv); pollIv = null; }
+
 function enterBonus(remainingMs) {
   if (bonusEntered) return;                     // poll ticks re-fire; set up once
   bonusEntered = true;
@@ -386,7 +398,10 @@ function enterBonus(remainingMs) {
   if (me.claimed_match) lockClaim();            // refreshed mid-round with a claim already saved
   bonusTick();
   tickIv = setInterval(bonusTick, 250);
-  pollIv = setInterval(checkConnected, 4000);
+  // R26: the partner who did NOT type waits on this poll, so it starts brisk and
+  // backs off. Early polls catch the common case (both claim within ~30 s); the
+  // slow tail costs 100 phones far less than a flat 4 s pull of the whole table.
+  schedulePoll(0);
   checkConnected();
 }
 
@@ -420,7 +435,8 @@ function bonusTick() {
   }
   showRank();                                   // R50: a rank is an identity, told at lock
   // Grace: a partner's claim may have landed right at the buzzer.
-  setTimeout(() => { checkConnected().finally(() => clearInterval(pollIv)); }, 5000);
+  stopPoll();                                   // no further scheduled polls
+  setTimeout(() => { checkConnected().finally(stopPoll); }, 5000);
 }
 
 // R50: fetch once at the lock. "9th of 44" is a story to tell the person
