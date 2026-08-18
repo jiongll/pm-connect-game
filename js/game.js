@@ -157,7 +157,7 @@ export function startGame(canvas, hud, questions, onFinish) {
   let coins = [], obstacles = [], quizCoin = null, quiz = null, popups = [];
   coinsLive = true;                            // resize() may now clear pulled coins
   let dashOffset = 0, coinTimer = 0.4, obstacleTimer = 1.2;
-  let nextQuiz = 0, qIndex = 0;
+  let nextQuiz = 0;
   let boostUntil = -1, invulnUntil = -1, feedback = null;
   let magnetUntil = -1;                        // timed reward, not a tier perk
   let streak = 0, lastCoinAt = -9;             // R12: chained pickups raise the blip's pitch
@@ -448,8 +448,12 @@ export function startGame(canvas, hud, questions, onFinish) {
 
     if (quizCoin) {
       if (Math.abs(quizCoin.y - carY()) < 50 && quizCoin.lane === carLane) {
-        const q = questions[qIndex % questions.length];
-        qIndex++;
+        // Indexed by which coin this is, not by how many the player has caught.
+        // nextQuiz is driven purely by the wall clock, so coin 3 asks question 3
+        // for everyone - a player who missed coins 1 and 2 still gets question 3
+        // here. Keeps the whole room on the same question at the same moment;
+        // indexing by catches silently drifted players out of sync.
+        const q = questions[(nextQuiz - 1) % questions.length];
         quizCoin = null;
         openQuiz(q);
       } else if (quizCoin.y > H + 60) {

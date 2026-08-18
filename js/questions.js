@@ -1,27 +1,30 @@
-// ── PLACEHOLDER CONTENT ──────────────────────────────────────────────
-// Replace before the event. Keep the shape exactly: three options,
-// `correct` is the index of the right one. Mix roughly 40% Mobility /
-// 60% playful Grab-wide. The game shows questions in this exact order
-// for every player (fairness), six gates per 90-second heat.
+// Six questions, one per question coin, in this exact order for every player.
+// The coin schedule is driven by the wall clock, so coin 3 is question 3 whether
+// or not the player caught coins 1 and 2 - see game.js, which indexes by coin
+// number rather than by catches. That is what keeps the room in sync: everyone
+// is asked the same thing at roughly the same moment, so the groans land together.
+//
+// Ordered easy -> hard -> laugh: nobody feels stupid on the first question, the
+// surprising numbers sit in the middle, and the run ends on the one people will
+// still be quoting at lunch. Correct answers are spread across all three
+// positions so nobody can pattern-match their way through under a 10s clock.
+//
+// `correct` is the index of the right option.
 export const QUESTIONS = [
-  { q: 'What does "AB" stand for in Grab Mobility?',
-    options: ['Auto Bid', 'Advance Booking', 'Airport Boost'], correct: 1 },
-  { q: 'How far ahead can a Grab ride be scheduled?',
-    options: ['Up to 90 days', 'Up to 7 days', 'Up to 24 hours'], correct: 0 },
-  { q: 'Grab drivers are known internally as...',
-    options: ['Pilots', 'Captains', 'DAX'], correct: 2 },
-  { q: 'Passengers are known internally as...',
-    options: ['PAX', 'Riders', 'Guests'], correct: 0 },
-  { q: 'Grab began life in 2012 under which name?',
-    options: ['GrabBike', 'MyTeksi', 'TaxiGo'], correct: 1 },
-  { q: 'Which of these is NOT a real Grab service?',
-    options: ['GrabExpress', 'GrabMart', 'GrabYacht'], correct: 2 },
-  { q: 'What colour is the Grab logo?',
-    options: ['Green', 'Blue', 'Orange'], correct: 0 },
-  { q: 'Where is Grab headquartered?',
-    options: ['Jakarta', 'Singapore', 'Kuala Lumpur'], correct: 1 },
-  { q: 'The Grab superapp started as an app for...',
-    options: ['Food delivery', 'Payments', 'Taxis'], correct: 2 },
-  { q: 'Which one is a real Grab ride tier?',
-    options: ['GrabCar Premium', 'GrabCar Turbo', 'GrabCar Max'], correct: 0 },
+  { q: 'How far ahead can you make an Advance Booking?',
+    options: ['30 days', '60 days', '90 days'], correct: 2 },
+  { q: 'MTT stands for…',
+    // "Multi Taxi Type", unhyphenated - that is how the Confluence flow guide
+    // and the backend RFC both write it. Internal usage is inconsistent (the
+    // data dictionary hyphenates, one techdocs page says "Multi-Transport-Type"),
+    // so the house spelling is the one to put on a screen in front of the room.
+    options: ['Metered Taxi Type', 'Multi Taxi Type', 'Marketplace Transport Tier'], correct: 1 },
+  { q: 'How many completed rides are cashless?',
+    options: ['~30%', '~50%', '~85%'], correct: 1 },
+  { q: 'How many completed rides are surged?',
+    options: ['~20%', '~30%', '~40%'], correct: 0 },
+  { q: 'Which ride-hailing player is NOT integrated with Grab?',
+    options: ['BlueBird', 'Didi', 'Careem'], correct: 2 },
+  { q: '"Redbull" at Grab is a…',
+    options: ['Racing team', 'Mobility project codename', "Someone's nickname"], correct: 1 },
 ];
